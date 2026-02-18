@@ -32,8 +32,21 @@ export const authOptions: NextAuthOptions = {
     LinkedInProvider({
       clientId: process.env.LINKEDIN_CLIENT_ID!,
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET!,
+      client: {
+        token_endpoint_auth_method: "client_secret_post",
+      },
+      issuer: "https://www.linkedin.com",
+      jwks_endpoint: "https://www.linkedin.com/oauth/openid/jwks",
       authorization: {
         params: { scope: "openid profile email" },
+      },
+      profile(profile) {
+        return {
+          id: profile.sub,
+          name: profile.name || profile.given_name || "LinkedIn User",
+          email: profile.email || `${profile.sub}@linkedin.local`,
+          image: profile.picture,
+        };
       },
     }),
   ],
