@@ -52,7 +52,7 @@ async def gather_context(state: AgentState) -> Dict:
     # Event-based logic
     if trigger_type == "milestone":
         # Fetch recent application stats
-        recent_apps = await db.list_applications(user_id, limit=10)
+        recent_apps = await db.get_applications(user_id, limit=10)
         topic = "Job Search Progress"
         post_context = f"Candidate has applied to {len(recent_apps)} companies this week using autonomous agents."
     elif trigger_type == "skill_gain":
@@ -199,8 +199,13 @@ async def run_linkedin_agent(
     user_id: str,
     topic: Optional[str] = None,
     context: Optional[str] = None,
+    mission_id: Optional[str] = None,
 ) -> AgentState:
-    mission_id = str(uuid.uuid4())
+    """
+    Run the LinkedIn Agent.
+    """
+    if not mission_id:
+        mission_id = str(uuid.uuid4())
     
     initial_state = create_initial_state(
         mission_id=mission_id,
@@ -213,6 +218,44 @@ async def run_linkedin_agent(
     )
     
     graph = build_linkedin_agent_graph()
-    final_state = await graph.ainvoke(initial_state)
+    
+    # Run graph with streaming to update database after each node
+    final_state = initial_state
+    try:
+        async for state_update in graph.astream(initial_state):
+            for node_name, node_output in state_update.items():
+                if node_output:
+                    for key, value in node_output.items():
+                        if key in ["events", "artifacts"] and key in final_state:
+                            final_state[key] = final_state[key] + value
+                        else:
+                            final_state[key] = value
+                    
+                    # Extract and normalize status
+                    status = final_state.get("status", MissionStatus.RUNNING)
+                    if hasattr(status, "value"):
+                        status = status.value
+                    
+                    # Update database with current progress
+                    try:
+                        await db.update_mission(
+                            mission_id,
+                            status=str(status),
+                            current_node=final_state.get("current_node", node_name),
+                            progress=int(final_state.get("progress", 0)),
+                            context=final_state.get("context"),
+                            events=[e.to_dict() if hasattr(e, "to_dict") else e for e in final_state.get("events", [])],
+                            artifacts=[a.to_dict() if hasattr(a, "to_dict") else a for a in final_state.get("artifacts", [])],
+                            requires_approval=final_state.get("requires_approval", False),
+                            approval_reason=final_state.get("approval_reason"),
+                        )
+                    except Exception as db_err:
+                        import logging
+                        logging.getLogger(__name__).error(f"Failed to update DB for mission {mission_id}: {db_err}")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"LinkedIn Agent execution failed: {e}", exc_info=True)
+        final_state["status"] = MissionStatus.FAILED
+        final_state["error"] = str(e)
     
     return final_state

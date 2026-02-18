@@ -41,6 +41,7 @@ export interface MissionArtifact {
 
 export interface MissionResponse {
   mission_id: string;
+  agent_type?: string;
   status: MissionStatus;
   progress: number;
   current_node: string;
@@ -49,6 +50,7 @@ export interface MissionResponse {
   output_data?: Record<string, any>;
   requires_approval: boolean;
   approval_reason?: string;
+  created_at?: string;
 }
 
 // Request types for each agent

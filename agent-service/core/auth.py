@@ -6,42 +6,26 @@ from fastapi import Header, HTTPException
 from typing import Optional
 
 
-async def get_current_user(authorization: Optional[str] = Header(None)) -> str:
+async def get_current_user(
+    authorization: Optional[str] = Header(None),
+    x_user_email: Optional[str] = Header(None, alias="X-User-Email")
+) -> str:
     """
-    Extract user_id from Authorization header.
+    Extract user_id from headers.
     
-    In production, this should validate JWT tokens from NextAuth.
-    For now, we'll extract from a simple Bearer token or default to demo-user.
-    
-    Args:
-        authorization: Authorization header (Bearer <token>)
-        
-    Returns:
-        user_id string
-        
-    Raises:
-        HTTPException: If auth is required but missing
+    Checks Authorization header first, then falls back to X-User-Email.
+    Used for NextAuth integration.
     """
-    # TODO: Integrate with NextAuth JWT validation
-    # For now, simple implementation
-    
-    if not authorization:
-        # Development: allow demo user
-        return "demo-user"
-    
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
-    
-    token = authorization[7:]  # Remove "Bearer "
-    
-    # TODO: Decode and validate JWT
-    # For now, just use the token as user_id
-    # In production, decode JWT and extract user_id from payload
-    
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing token")
-    
-    return token  # In production: return user_id from JWT payload
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+        if token:
+            return token
+            
+    if x_user_email:
+        return x_user_email
+        
+    # Development fallback
+    return "demo-user"
 
 
 def verify_user_owns_resource(user_id: str, resource_user_id: str) -> None:

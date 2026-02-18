@@ -85,9 +85,9 @@ class DatabaseService:
         async with cls.connection() as conn:
             job_id = await conn.fetchval(
                 """
-                INSERT INTO jobs (user_id, title, company, location, description, url, source, embedding, salary_range, job_type)
+                INSERT INTO jobs (user_id, title, company, location, description, job_url, source, embedding, salary_range, job_type)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                ON CONFLICT (user_id, url) DO NOTHING
+                ON CONFLICT (user_id, job_url) DO NOTHING
                 RETURNING id
                 """,
                 user_id, title, company, location, description, url, source,
@@ -95,6 +95,16 @@ class DatabaseService:
             )
             return str(job_id) if job_id else None
     
+    @classmethod
+    async def get_job_by_id(cls, job_id: str, user_id: str) -> Optional[Dict]:
+        """Get a specific job by ID and user_id."""
+        async with cls.connection() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM jobs WHERE id = $1 AND user_id = $2",
+                job_id, user_id
+            )
+            return dict(row) if row else None
+
     @classmethod
     async def get_jobs(
         cls,
@@ -191,6 +201,21 @@ class DatabaseService:
             rows = await conn.fetch(query, *params)
             return [dict(row) for row in rows]
     
+    @classmethod
+    async def get_resumes(
+        cls,
+        user_id: str,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[Dict]:
+        """List resumes for a user."""
+        async with cls.connection() as conn:
+            rows = await conn.fetch(
+                "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+                user_id, limit, offset
+            )
+            return [dict(row) for row in rows]
+    
     # ========== Application Operations ==========
     
     @classmethod
@@ -206,7 +231,7 @@ class DatabaseService:
         async with cls.connection() as conn:
             app_id = await conn.fetchval(
                 """
-                INSERT INTO applications (user_id, job_id, resume_id, cover_letter, status)
+                INSERT INTO applications (user_id, job_id, resume_id, cover_letter_url, status)
                 VALUES ($1, $2, $3, $4, $5)
                 RETURNING id
                 """,
@@ -232,6 +257,50 @@ class DatabaseService:
                 application_id, status, notes
             )
             return result == "UPDATE 1"
+    
+    @classmethod
+    async def get_applications(
+        cls,
+        user_id: str,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[Dict]:
+        """List applications for a user."""
+        async with cls.connection() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT a.*, j.title as job_title, j.company as job_company 
+                FROM applications a
+                JOIN jobs j ON a.job_id = j.id
+                WHERE a.user_id = $1 
+                ORDER BY a.applied_at DESC 
+                LIMIT $2 OFFSET $3
+                """,
+                user_id, limit, offset
+            )
+            return [dict(row) for row in rows]
+    
+    @classmethod
+    async def get_linkedin_posts(
+        cls,
+        user_id: str,
+        status: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0
+    ) -> List[Dict]:
+        """List LinkedIn posts for a user."""
+        async with cls.connection() as conn:
+            query = "SELECT * FROM linkedin_posts WHERE user_id = $1"
+            params = [user_id]
+            if status:
+                query += " AND status = $2"
+                params.append(status)
+            
+            query += f" ORDER BY created_at DESC LIMIT ${len(params)+1} OFFSET ${len(params)+2}"
+            params.extend([limit, offset])
+            
+            rows = await conn.fetch(query, *params)
+            return [dict(row) for row in rows]
     
     # ========== User Settings Operations ==========
     
@@ -377,8 +446,8 @@ class DatabaseService:
         """List missions for a user. Optimized for performance by excluding large fields in summary mode."""
         async with cls.connection() as conn:
             if summary:
-                # Exclude large context, input_data, and full events for list view
-                fields = "id, user_id, agent_type, status, current_node, progress, artifacts, created_at"
+                # Exclude large context and input_data for list view
+                fields = "id, user_id, agent_type, status, current_node, progress, artifacts, events, created_at"
             else:
                 fields = "*"
                 
@@ -396,7 +465,7 @@ class DatabaseService:
             missions = []
             
             # Fields that need JSON parsing
-            json_fields = ['artifacts'] if summary else ['input_data', 'output_data', 'context', 'events', 'artifacts']
+            json_fields = ['artifacts', 'events'] if summary else ['input_data', 'output_data', 'context', 'events', 'artifacts']
             
             for row in rows:
                 mission = dict(row)
@@ -405,6 +474,35 @@ class DatabaseService:
                         mission[field] = json.loads(mission[field]) if isinstance(mission[field], str) else mission[field]
                 missions.append(mission)
             return missions
+
+    @classmethod
+    async def get_dashboard_stats(cls, user_id: str) -> Dict[str, Any]:
+        """Get summary statistics for the dashboard KPI strip."""
+        async with cls.connection() as conn:
+            jobs_count = await conn.fetchval(
+                "SELECT count(*) FROM jobs WHERE user_id = $1", user_id
+            ) or 0
+            apps_count = await conn.fetchval(
+                "SELECT count(*) FROM applications WHERE user_id = $1", user_id
+            ) or 0
+            resumes_count = await conn.fetchval(
+                "SELECT count(*) FROM resumes WHERE user_id = $1", user_id
+            ) or 0
+            active_missions = await conn.fetchval(
+                "SELECT count(*) FROM missions WHERE user_id = $1 AND status IN ('running', 'pending', 'waiting_approval')",
+                user_id,
+            ) or 0
+
+            # Estimated time saved: 30min per app, 45min per resume
+            time_saved_hrs = round((apps_count * 0.5) + (resumes_count * 0.75), 1)
+
+            return {
+                "jobs_found": jobs_count,
+                "applications_sent": apps_count,
+                "resumes_generated": resumes_count,
+                "active_missions": active_missions,
+                "time_saved_hrs": time_saved_hrs,
+            }
 
 
 # Singleton instance

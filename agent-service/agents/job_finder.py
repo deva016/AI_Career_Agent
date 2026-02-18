@@ -17,6 +17,7 @@ from graphs.state import (
     create_initial_state, update_status, MissionEvent, Artifact
 )
 from core.database import db
+from core.llm import get_langchain_llm
 from rag.embeddings import embeddings
 from scrapers.linkedin_scraper import LinkedInScraper
 
@@ -306,9 +307,13 @@ async def run_job_finder(
             for node_name, node_output in state_update.items():
                 logger.info(f"Job Finder - Node '{node_name}' executed for mission {mission_id}")
                 
-                # Merge node output into current state
+                # Merge node output into current state correctly (handle list accumulation)
                 if node_output:
-                    final_state = {**final_state, **node_output}
+                    for key, value in node_output.items():
+                        if key in ["events", "artifacts"] and key in final_state:
+                            final_state[key] = final_state[key] + value
+                        else:
+                            final_state[key] = value
                     
                     # Extract and normalize status
                     status = final_state.get("status", MissionStatus.RUNNING)

@@ -7,6 +7,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
+import asyncio
+import sys
+
+# Windows-specific fix for "NotImplementedError" when using Playwright/subprocesses in asyncio
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from core.config import get_settings
 from core.database import DatabaseService
@@ -89,10 +95,14 @@ async def health_check():
 
 
 # Import and include routers
-from app.routers import agent, jobs
+from app.routers import agent, jobs, resumes, applications, linkedin, dashboard
 
 app.include_router(agent.router, prefix="/api/agent", tags=["Agent Missions"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["Jobs"])
+app.include_router(resumes.router, prefix="/api/resumes", tags=["Resumes"])
+app.include_router(applications.router, prefix="/api/applications", tags=["Applications"])
+app.include_router(linkedin.router, prefix="/api/linkedin", tags=["LinkedIn"])
+app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
 
 
 if __name__ == "__main__":

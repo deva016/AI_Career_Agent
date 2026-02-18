@@ -4,12 +4,13 @@ Jobs API Router
 Endpoints for managing job listings.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 
 from core.database import db
+from core.auth import get_current_user
 
 router = APIRouter()
 
@@ -44,7 +45,7 @@ class JobListResponse(BaseModel):
 
 @router.get("", response_model=JobListResponse)
 async def list_jobs(
-    user_id: str = "demo-user",
+    user_id: str = Depends(get_current_user),
     status: Optional[str] = Query(None, description="Filter by status"),
     limit: int = Query(50, le=100),
     offset: int = Query(0, ge=0),
@@ -68,7 +69,7 @@ async def list_jobs(
             company=j["company"],
             location=j["location"],
             description=j["description"][:500] + "..." if len(j.get("description", "")) > 500 else j.get("description", ""),
-            url=j["url"],
+            url=j.get("job_url", j.get("url", "")),
             source=j["source"],
             salary_range=j.get("salary_range"),
             job_type=j.get("job_type"),
@@ -82,10 +83,9 @@ async def list_jobs(
 
 
 @router.get("/{job_id}", response_model=JobResponse)
-async def get_job(job_id: str, user_id: str = "demo-user"):
+async def get_job(job_id: str, user_id: str = Depends(get_current_user)):
     """Get a specific job by ID."""
-    jobs = await db.get_jobs(user_id=user_id, limit=1)
-    job = next((j for j in jobs if str(j["id"]) == job_id), None)
+    job = await db.get_job_by_id(job_id=job_id, user_id=user_id)
     
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -96,7 +96,7 @@ async def get_job(job_id: str, user_id: str = "demo-user"):
         company=job["company"],
         location=job["location"],
         description=job["description"],
-        url=job["url"],
+        url=job.get("job_url", job.get("url", "")),
         source=job["source"],
         salary_range=job.get("salary_range"),
         job_type=job.get("job_type"),
@@ -109,7 +109,7 @@ async def get_job(job_id: str, user_id: str = "demo-user"):
 async def update_job_status(
     job_id: str,
     status: str,
-    user_id: str = "demo-user",
+    user_id: str = Depends(get_current_user),
 ):
     """Update the status of a job (e.g., applied, rejected, saved)."""
     # TODO: Implement update in database
@@ -119,7 +119,7 @@ async def update_job_status(
 @router.post("/search")
 async def search_jobs(
     query: str,
-    user_id: str = "demo-user",
+    user_id: str = Depends(get_current_user),
     limit: int = 10,
 ):
     """

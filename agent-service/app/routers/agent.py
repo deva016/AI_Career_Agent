@@ -81,6 +81,7 @@ class InterviewRequest(BaseModel):
 class MissionResponse(BaseModel):
     """Response containing mission status."""
     mission_id: str
+    agent_type: Optional[str] = None
     status: str
     progress: int
     current_node: str
@@ -89,6 +90,7 @@ class MissionResponse(BaseModel):
     output_data: Optional[Dict[str, Any]] = None
     requires_approval: bool = False
     approval_reason: Optional[str] = None
+    created_at: Optional[str] = None
 
 
 class ApprovalRequest(BaseModel):
@@ -101,23 +103,45 @@ class ApprovalRequest(BaseModel):
 
 def state_to_response(data: Dict) -> MissionResponse:
     """Convert DB mission data to API response."""
-    # Handle both dict and AgentState objects
     mission_id = data.get("mission_id") or data.get("id") or "unknown"
     status = data.get("status") or "pending"
     if hasattr(status, "value"):
         status = status.value
     
-    # Handle None values with defaults
+    # Parse events/artifacts: they may be JSON strings from DB
+    raw_events = data.get("events") or []
+    if isinstance(raw_events, str):
+        try:
+            raw_events = json.loads(raw_events)
+        except (json.JSONDecodeError, TypeError):
+            raw_events = []
+    events = [e.to_dict() if hasattr(e, "to_dict") else e for e in raw_events]
+    
+    raw_artifacts = data.get("artifacts") or []
+    if isinstance(raw_artifacts, str):
+        try:
+            raw_artifacts = json.loads(raw_artifacts)
+        except (json.JSONDecodeError, TypeError):
+            raw_artifacts = []
+    artifacts = [a.to_dict() if hasattr(a, "to_dict") else a for a in raw_artifacts]
+    
+    # Handle created_at
+    created_at = data.get("created_at")
+    if created_at and hasattr(created_at, "isoformat"):
+        created_at = created_at.isoformat()
+    
     return MissionResponse(
         mission_id=str(mission_id),
+        agent_type=data.get("agent_type"),
         status=str(status),
         progress=int(data.get("progress") or 0),
         current_node=str(data.get("current_node") or "unknown"),
-        events=[e.to_dict() if hasattr(e, "to_dict") else e for e in (data.get("events") or [])],
-        artifacts=[a.to_dict() if hasattr(a, "to_dict") else a for a in (data.get("artifacts") or [])],
+        events=events,
+        artifacts=artifacts,
         output_data=data.get("output_data"),
         requires_approval=bool(data.get("requires_approval", False)),
         approval_reason=data.get("approval_reason"),
+        created_at=str(created_at) if created_at else None,
     )
 
 

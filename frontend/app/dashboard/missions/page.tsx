@@ -1,14 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { Target, Plus, Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
-  Sidebar,
+  Target, Plus, Filter, Bot, FileText, Send,
+  Linkedin, TrendingUp, Mic,
+} from "lucide-react";
+
+// Agent type display config
+const AGENT_CONFIG: Record<string, { label: string; icon: any }> = {
+  job_finder: { label: "Job Finder", icon: Target },
+  resume: { label: "Resume Agent", icon: FileText },
+  application: { label: "Application Agent", icon: Send },
+  linkedin: { label: "LinkedIn Agent", icon: Linkedin },
+  skill_gap: { label: "Skill Gap Analysis", icon: TrendingUp },
+  interview: { label: "Interview Prep", icon: Mic },
+};
+
+function formatTimeAgo(isoString?: string): string {
+  if (!isoString) return "Recent";
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  return `${Math.floor(diffHrs / 24)}d ago`;
+}
+import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
+import { agentClient } from "@/lib/api/agent-client";
+import {
   DashboardHeader,
   MissionCard,
   EmptyState,
   PageSkeleton,
+  LaunchMissionModal,
 } from "@/components/dashboard";
 import { useMissions, useApproveMission } from "@/lib/hooks/use-missions";
 import {
@@ -32,15 +60,36 @@ function mapMissionStatus(backendStatus: string): "executing" | "needs_review" |
   return statusMap[backendStatus] || "thinking";
 }
 
-// Map agent type to icon  
-function getAgentIcon(agentType: string) {
-  return Target; // Simplified for now
-}
-
 export default function MissionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { missions, loading, error, refetch } = useMissions();
   const { approve } = useApproveMission();
+  const { toast } = useToast();
+  const [launching, setLaunching] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleLaunchJobFinder = async (params: { query: string; target_roles: string[]; target_locations: string[] }) => {
+    setLaunching(true);
+    try {
+      await agentClient.startJobFinder(params);
+      
+      toast({
+        title: "Mission Launched! 🚀",
+        description: `Started searching for ${params.query} roles.`,
+      });
+      
+      setIsModalOpen(false);
+      setTimeout(refetch, 1000);
+    } catch (err) {
+      toast({
+        title: "Launch Failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setLaunching(false);
+    }
+  };
 
   const handleApprove = async (id: string) => {
     const result = await approve(id, true);
@@ -62,90 +111,94 @@ export default function MissionsPage() {
   });
 
   if (loading && missions.length === 0) {
-    return (
-      <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-black flex">
-        <Sidebar />
-        <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8">
-          <PageSkeleton />
-        </main>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-gray-950 to-black flex">
-      <Sidebar />
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="space-y-6"
+    >
+      <DashboardHeader
+        title="Mission Control"
+        description="Monitor and command your autonomous agent fleet"
+        action={{
+          label: "Launch Search",
+          icon: Plus,
+          onClick: () => setIsModalOpen(true),
+        }}
+      >
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
+            <Filter className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="running">Running</SelectItem>
+            <SelectItem value="waiting_approval">Needs Approval</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="failed">Failed</SelectItem>
+          </SelectContent>
+        </Select>
+      </DashboardHeader>
 
-      <main className="flex-1 md:ml-64 p-4 md:p-8 pt-20 md:pt-8">
-        <DashboardHeader
-          title="All Missions"
-          description="View and manage all agent missions"
-          action={{
-            label: "New Mission",
-            icon: Plus,
-            onClick: () => {
-              // TODO: Open new mission dialog
-              alert("New mission dialog coming soon!");
-            },
-          }}
-        >
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="running">Running</SelectItem>
-              <SelectItem value="waiting_approval">Needs Approval</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-            </SelectContent>
-          </Select>
-        </DashboardHeader>
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+          <p className="text-red-400 font-medium">System Error: {error}</p>
+        </div>
+      )}
 
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
-            <p className="text-red-400">{error}</p>
-          </div>
-        )}
-
-        {filteredMissions.length > 0 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredMissions.map((mission) => (
+      {filteredMissions.length > 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20">
+          {filteredMissions.map((mission, idx) => {
+            const config = AGENT_CONFIG[mission.agent_type || ""] || { label: mission.current_node || "Agent", icon: Bot };
+            return (
+            <motion.div
+              key={mission.mission_id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+            >
               <MissionCard
-                key={mission.mission_id}
                 mission={{
                   id: mission.mission_id,
-                  agent: mission.current_node || "Agent",
-                  icon: getAgentIcon(mission.current_node || ""),
+                  agent: config.label,
+                  icon: config.icon,
                   status: mapMissionStatus(mission.status.toString()),
                   statusLabel: mission.status.replace("_", " "),
                   progress: mission.progress || 0,
-                  timestamp: "Recent", // No created_at in MissionResponse
+                  timestamp: formatTimeAgo(mission.created_at),
                   artifact: mission.artifacts?.[0]?.title,
                 }}
                 onApprove={handleApprove}
                 onRegenerate={handleRegenerate}
               />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            icon={Target}
-            title={statusFilter === "all" ? "No missions yet" : `No ${statusFilter} missions`}
-            description="Start your first mission to see it appear here"
-            action={{
-              label: "Create Mission",
-              icon: Plus,
-              onClick: () => {
-                alert("New mission dialog coming soon!");
-              },
-            }}
-          />
-        )}
-      </main>
-    </div>
+            </motion.div>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          icon={Target}
+          title={statusFilter === "all" ? "No missions yet" : `No ${statusFilter} missions`}
+          description="Initialize your first career agent mission to see them in control here."
+          action={{
+            label: "Launch First Mission",
+            icon: Plus,
+            onClick: () => setIsModalOpen(true),
+          }}
+        />
+      )}
+
+      <LaunchMissionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onLaunch={handleLaunchJobFinder}
+        isLaunching={launching}
+      />
+    </motion.div>
   );
 }
