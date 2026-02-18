@@ -2,7 +2,7 @@
 
 Full-stack SaaS application that automates job searching, resume tailoring, and application tracking using AI agents with human-in-the-loop oversight.
 
-## 🎯 MVP Features (Phase 1)
+## 🎯 MVP Features
 
 - ✅ **Job Scraping**: LinkedIn for discovery, company ATS pages for application
 - ✅ **Resume Tailoring**: RAG-based resume generation with typed chunk retrieval
