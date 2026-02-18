@@ -1,0 +1,33 @@
+# Core
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-dotenv
+
+# LLM & AI
+langchain
+langgraph
+langchain-openai
+openai
+tiktoken
+
+# Database
+psycopg2-binary
+asyncpg
+pgvector
+
+# Embeddings & RAG
+numpy
+
+# Browser Automation
+playwright
+
+# PDF Processing
+pypdf2
+
+# HTTP Client
+httpx
+
+# Streaming
+sse-starlette

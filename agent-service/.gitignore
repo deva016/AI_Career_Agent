@@ -1,0 +1,49 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv
+
+# Environment variables
+.env
+.env.local
+!.env.example
+
+# Test artifacts
+*_fail.txt
+*_output.txt
+*_pass.txt
+*_results.txt
+backend_v2_output.txt
+backend_v2_results.txt
+test_embeddings_debug.py
+debug_config_import.py
+debug_import.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.coveragerc
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

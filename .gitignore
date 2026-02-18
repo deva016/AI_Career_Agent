@@ -1,0 +1,16 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Large model files or local data (if any)
+*.db
+*.sqlite
