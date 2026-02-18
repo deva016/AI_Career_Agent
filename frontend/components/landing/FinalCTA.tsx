@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export function FinalCTA() {
   return (
@@ -32,9 +33,11 @@ export function FinalCTA() {
             transition={{ delay: 0.3, duration: 0.6 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-6"
           >
-            <Button className="h-16 px-12 rounded-full text-xl font-bold bg-white text-black hover:bg-gray-200 transition-all scale-100 hover:scale-105 active:scale-95 shadow-2xl">
-              Get Started Now
-            </Button>
+            <Link href="/dashboard">
+              <Button className="h-16 px-12 rounded-full text-xl font-bold bg-white text-black hover:bg-gray-200 transition-all scale-100 hover:scale-105 active:scale-95 shadow-2xl">
+                Get Started Now
+              </Button>
+            </Link>
             <Button variant="outline" className="h-16 px-12 rounded-full text-xl font-bold border-white/10 text-white hover:bg-white/5 transition-all">
               Contact Sales
             </Button>

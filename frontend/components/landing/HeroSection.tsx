@@ -4,6 +4,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { HeroCanvas } from "./HeroCanvas";
 
 const containerVariants = {
@@ -96,9 +97,11 @@ export function HeroSection() {
           variants={itemVariants}
           className="flex flex-col sm:flex-row items-center justify-center gap-6"
         >
-          <Button className="h-14 px-10 rounded-full text-lg font-bold bg-white text-black hover:bg-gray-200 transition-all scale-100 hover:scale-105 active:scale-95 shadow-2xl shadow-white/10">
-            Start Building
-          </Button>
+          <Link href="/dashboard">
+            <Button className="h-14 px-10 rounded-full text-lg font-bold bg-white text-black hover:bg-gray-200 transition-all scale-100 hover:scale-105 active:scale-95 shadow-2xl shadow-white/10">
+              Start Building
+            </Button>
+          </Link>
           <Button variant="outline" className="h-14 px-10 rounded-full text-lg font-bold border-white/10 text-white hover:bg-white/5 transition-all gap-2">
             Read Documentation
             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
