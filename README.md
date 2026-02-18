@@ -126,9 +126,7 @@ Daily Scrape → Job Match Score → Resume Tailor → HITL Review → Apply →
 - **GitHub Actions**: 2000 minutes/month
 
 ## 📝 License
-
+'''
 MIT
 
-## 👤 Author
 
-Built with ❤️ by [Your Name]
