@@ -52,7 +52,7 @@ export function HeroSection() {
 
         <motion.h1 
           variants={itemVariants}
-          className="text-5xl md:text-8xl font-black tracking-tighter text-white mb-8 leading-[0.9]"
+          className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter text-white mb-8 leading-[0.9]"
         >
           {Array.from("THE COMPLETE PLATFORM TO").map((char, i) => (
             <motion.span
@@ -86,7 +86,7 @@ export function HeroSection() {
 
         <motion.p 
           variants={itemVariants}
-          className="text-white/60 text-xl md:text-2xl max-w-3xl mx-auto mb-12 leading-relaxed"
+          className="text-white/60 text-lg md:text-2xl max-w-3xl mx-auto mb-12 leading-relaxed px-4 md:px-0"
         >
           Autonomous agents that discover jobs, tailor resumes, and manage your applications. 
           The smarter way to land your next elite industry role.

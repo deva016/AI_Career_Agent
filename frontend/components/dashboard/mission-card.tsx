@@ -86,16 +86,16 @@ export function MissionCard({
   return (
     <Card className="group hover:bg-white/10 transition-all duration-300 cursor-pointer border-white/10 bg-white/5 backdrop-blur-md hover:shadow-lg hover:shadow-purple-500/10 hover:-translate-y-0.5">
       <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-4 mb-4">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 border border-white/5 group-hover:scale-110 transition-transform">
-              <Icon className="w-5 h-5 text-purple-400" />
+            <div className="p-2 md:p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 border border-white/5 group-hover:scale-110 transition-transform">
+              <Icon className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
             </div>
             <div>
-              <h3 className="font-semibold text-white tracking-tight">
+              <h3 className="font-semibold text-white tracking-tight text-sm md:text-base">
                 {mission.agent}
               </h3>
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wider opacity-70">
+              <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider opacity-70">
                 {mission.timestamp}
               </p>
             </div>
@@ -103,19 +103,19 @@ export function MissionCard({
           <StatusBadge status={mission.status} label={mission.statusLabel} />
         </div>
 
-        <div className="mb-4 space-y-2">
-          <div className="flex justify-between text-xs text-muted-foreground">
+        <div className="mb-6 space-y-2">
+          <div className="flex justify-between text-[10px] md:text-xs text-muted-foreground">
             <span>Progress</span>
             <span>{mission.progress}%</span>
           </div>
-          <Progress value={mission.progress} className="h-1.5" />
+          <Progress value={mission.progress} className="h-1 md:h-1.5" />
         </div>
 
         {mission.status === "needs_review" && (
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex flex-wrap items-center gap-2 mt-4">
             <Button
               size="sm"
-              className="h-8 gap-1.5"
+              className="h-8 md:h-9 gap-1.5 px-3 md:px-4 text-[11px] md:text-xs flex-1 sm:flex-none"
               onClick={() => onApprove?.(mission.id)}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -124,7 +124,7 @@ export function MissionCard({
             <Button
               size="sm"
               variant="outline"
-              className="h-8 gap-1.5"
+              className="h-8 md:h-9 gap-1.5 px-3 md:px-4 text-[11px] md:text-xs flex-1 sm:flex-none"
               onClick={() => onRegenerate?.(mission.id)}
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -133,7 +133,7 @@ export function MissionCard({
             <Button
               size="sm"
               variant="ghost"
-              className="h-8 gap-1.5"
+              className="h-8 md:h-9 gap-1.5 px-3 md:px-4 text-[11px] md:text-xs flex-1 sm:flex-none"
               onClick={() => onEdit?.(mission.id)}
             >
               <PenSquare className="w-3.5 h-3.5" />

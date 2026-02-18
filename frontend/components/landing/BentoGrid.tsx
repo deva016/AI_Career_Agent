@@ -69,7 +69,7 @@ function FeatureCard({ feature, idx }: { feature: any, idx: number }) {
       viewport={{ once: true }}
       transition={{ duration: 0.4, delay: idx * 0.1 }}
       onMouseMove={onMouseMove}
-      className={`group relative overflow-hidden rounded-3xl border border-white/5 bg-white/[0.03] p-8 transition-colors hover:border-white/10 ${feature.className}`}
+      className={`group relative overflow-hidden rounded-3xl border border-white/5 bg-white/[0.03] p-6 md:p-8 transition-colors hover:border-white/10 ${feature.className}`}
     >
       {/* Spotlight Effect */}
       <motion.div
@@ -98,14 +98,14 @@ function FeatureCard({ feature, idx }: { feature: any, idx: number }) {
 
 export function BentoGrid() {
   return (
-    <section id="features" className="py-24 px-6 md:px-12 bg-transparent">
+    <section id="features" className="py-16 md:py-24 px-4 md:px-12 bg-transparent">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-16 text-center">
+        <div className="mb-12 md:mb-16 text-center">
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-3xl md:text-5xl font-bold text-white mb-4"
+            className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-4"
           >
             Everything you need to build at scale.
           </motion.h2>

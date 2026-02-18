@@ -17,11 +17,11 @@ export function FinalCTA() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 1, ease: "circOut" as any }}
         >
-          <h2 className="text-5xl md:text-8xl font-black text-white mb-8 tracking-tighter uppercase italic leading-[0.85]">
+          <h2 className="text-4xl sm:text-6xl md:text-8xl font-black text-white mb-8 tracking-tighter uppercase italic leading-[0.85]">
             Build your <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-cyan-400 to-purple-500 italic">future, autonomously.</span>
           </h2>
-          <p className="text-white/60 text-xl md:text-2xl mb-12 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-white/60 text-lg md:text-2xl mb-12 max-w-2xl mx-auto leading-relaxed px-4">
             Join the elite circle of job seekers using autonomous intelligence to win the modern market.
           </p>
           
