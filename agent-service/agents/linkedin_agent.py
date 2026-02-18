@@ -40,25 +40,35 @@ Draft the post:
 
 async def gather_context(state: AgentState) -> Dict:
     """
-    Gather context for the post (recent achievements, resume highlights).
+    Gather context for the post (recent achievements, resume highlights, or system events).
     """
     input_data = state["input_data"]
-    topic = input_data.get("topic", "General career update")
+    trigger_type = input_data.get("trigger", "manual")
+    user_id = state["user_id"]
     
-    # In a real app, we might fetch recent "wins" from the DB
-    # For now, we rely on user input or general resume context
+    topic = input_data.get("topic", "Career Update")
+    post_context = input_data.get("context", "")
     
-    context = input_data.get("context", "")
-    
+    # Event-based logic
+    if trigger_type == "milestone":
+        # Fetch recent application stats
+        recent_apps = await db.list_applications(user_id, limit=10)
+        topic = "Job Search Progress"
+        post_context = f"Candidate has applied to {len(recent_apps)} companies this week using autonomous agents."
+    elif trigger_type == "skill_gain":
+        topic = "Skill Development"
+        # Topic/Context should be provided in input_data
+        
     return {
         "context": {
             **state.get("context", {}),
             "topic": topic,
-            "post_context": context,
+            "post_context": post_context,
+            "trigger": trigger_type
         },
         "events": [MissionEvent(
             type="log",
-            message=f"Gathering context for topic: {topic}",
+            message=f"Gathered context for trigger: {trigger_type}",
         )],
         **update_status(state, MissionStatus.RUNNING, "gather_context", 20)
     }

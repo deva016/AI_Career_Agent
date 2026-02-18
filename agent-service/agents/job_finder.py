@@ -16,9 +16,9 @@ from graphs.state import (
     AgentState, MissionStatus, AgentType,
     create_initial_state, update_status, MissionEvent, Artifact
 )
-from core.llm import get_langchain_llm
 from core.database import db
 from rag.embeddings import embeddings
+from scrapers.linkedin_scraper import LinkedInScraper
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -65,52 +65,30 @@ async def parse_search_criteria(state: AgentState) -> Dict:
 
 async def scrape_jobs(state: AgentState) -> Dict:
     """
-    Scrape jobs from configured sources.
-    For now, returns mock data. Real implementation will use Playwright.
+    Scrape jobs from configured sources using Playwright scrapers.
     """
     criteria = state["context"].get("parsed_criteria", {})
     
-    # TODO: Implement real scraping with Playwright
-    # For now, generate mock job listings
-    mock_jobs = [
-        {
-            "title": "Senior Software Engineer",
-            "company": "TechCorp Inc.",
-            "location": "San Francisco, CA (Remote)",
-            "description": "We are looking for a Senior Software Engineer with 5+ years of experience in Python, React, and cloud technologies. You will work on building scalable microservices and leading technical initiatives.",
-            "url": "https://example.com/jobs/1",
-            "source": "mock",
-            "salary_range": "$150k - $200k",
-            "job_type": "full-time",
-        },
-        {
-            "title": "Full Stack Developer",
-            "company": "StartupXYZ",
-            "location": "New York, NY",
-            "description": "Join our fast-growing startup as a Full Stack Developer. Work with Next.js, Node.js, and PostgreSQL to build innovative products.",
-            "url": "https://example.com/jobs/2",
-            "source": "mock",
-            "salary_range": "$120k - $160k",
-            "job_type": "full-time",
-        },
-        {
-            "title": "Backend Engineer",
-            "company": "DataFlow Systems",
-            "location": "Austin, TX (Hybrid)",
-            "description": "Backend Engineer needed for our data platform team. Experience with Python, FastAPI, and distributed systems required.",
-            "url": "https://example.com/jobs/3",
-            "source": "mock",
-            "salary_range": "$130k - $170k",
-            "job_type": "full-time",
-        },
-    ]
+    # Initialize scrapers
+    all_jobs = []
+    
+    # LinkedIn Scraper
+    try:
+        async with LinkedInScraper(headless=True) as scraper:
+            linkedin_jobs = await scraper.scrape(criteria)
+            all_jobs.extend(linkedin_jobs)
+            logger.info(f"LinkedIn Scraper returned {len(linkedin_jobs)} jobs")
+    except Exception as e:
+        logger.error(f"LinkedIn Scraper failed: {e}")
+        
+    # TODO: Add more scrapers here (Indeed, Glassdoor, etc.)
     
     return {
-        "context": {**state["context"], "scraped_jobs": mock_jobs},
+        "context": {**state["context"], "scraped_jobs": all_jobs},
         "events": [MissionEvent(
             type="log",
-            message=f"Scraped {len(mock_jobs)} jobs from sources",
-            data={"count": len(mock_jobs)}
+            message=f"Scraped {len(all_jobs)} jobs from LinkedIn",
+            data={"count": len(all_jobs)}
         )],
         **update_status(state, MissionStatus.EXECUTING, "scrape_jobs", 40)
     }

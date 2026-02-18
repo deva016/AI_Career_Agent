@@ -37,7 +37,7 @@ export function useMissions(filters?: MissionsFilter) {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [JSON.stringify(filters)]);
 
   useEffect(() => {
     fetchMissions();

@@ -471,7 +471,8 @@ async def list_missions(
         user_id=user_id,
         status=status,
         limit=limit,
-        offset=offset
+        offset=offset,
+        summary=True
     )
     
     return {

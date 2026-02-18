@@ -372,10 +372,17 @@ class DatabaseService:
         status: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
+        summary: bool = True
     ) -> List[Dict]:
-        """List missions for a user."""
+        """List missions for a user. Optimized for performance by excluding large fields in summary mode."""
         async with cls.connection() as conn:
-            query = "SELECT * FROM missions WHERE user_id = $1"
+            if summary:
+                # Exclude large context, input_data, and full events for list view
+                fields = "id, user_id, agent_type, status, current_node, progress, artifacts, created_at"
+            else:
+                fields = "*"
+                
+            query = f"SELECT {fields} FROM missions WHERE user_id = $1"
             params = [user_id]
             
             if status:
@@ -387,9 +394,13 @@ class DatabaseService:
             
             rows = await conn.fetch(query, *params)
             missions = []
+            
+            # Fields that need JSON parsing
+            json_fields = ['artifacts'] if summary else ['input_data', 'output_data', 'context', 'events', 'artifacts']
+            
             for row in rows:
                 mission = dict(row)
-                for field in ['input_data', 'output_data', 'context', 'events', 'artifacts']:
+                for field in json_fields:
                     if mission.get(field):
                         mission[field] = json.loads(mission[field]) if isinstance(mission[field], str) else mission[field]
                 missions.append(mission)
