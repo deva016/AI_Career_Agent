@@ -149,7 +149,7 @@ export function useApproveMission() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const approve = useCallback(async (missionId: string, approved: boolean, feedback?: string) => {
+  const approve = useCallback(async (missionId: string, approved: boolean, feedback?: string, edited_content?: string) => {
     setLoading(true);
     setError(null);
 
@@ -157,6 +157,7 @@ export function useApproveMission() {
       const response = await agentClient.approveMission(missionId, {
         approved,
         feedback,
+        edited_content,
       });
       return { success: true, data: response, error: null };
     } catch (err) {

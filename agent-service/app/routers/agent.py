@@ -97,6 +97,7 @@ class ApprovalRequest(BaseModel):
     """Request to approve or reject a mission."""
     approved: bool
     feedback: Optional[str] = None
+    edited_content: Optional[str] = Field(None, description="Manually edited content to override AI draft")
 
 
 # ========== Helper Functions ==========
@@ -469,12 +470,42 @@ async def approve_mission(
         "status": MissionStatus.APPROVED.value if request.approved else MissionStatus.REJECTED.value
     }
     
+    # If user provided edited content, update the artifacts
+    if request.edited_content:
+        logger.info(f"Applying manual edits to mission {mission_id}")
+        # Update artifacts with the new content
+        artifacts = mission.get("artifacts", [])
+        if artifacts:
+            # Update the first markdown artifact (usually the resume/letter)
+            artifacts[0]["content"] = request.edited_content
+            updates["artifacts"] = artifacts
+        
+        # Also update output_data for consistency
+        output_data = mission.get("output_data", {})
+        output_data["content"] = request.edited_content
+        updates["output_data"] = output_data
+    
     if request.approved:
-        # TODO: Implement true graph resumption (deferred per review)
-        # For now, mark complete if approved
+        # User approved the content
         updates["status"] = MissionStatus.COMPLETED.value
         updates["progress"] = 100
-        updates["completed_at"] = datetime.now().isoformat()
+        updates["completed_at"] = datetime.now()
+    else:
+        # User requested regeneration with feedback
+        updates["status"] = MissionStatus.RUNNING.value
+        updates["progress"] = 50  # Reset for regeneration
+        updates["requires_approval"] = False
+        
+        # Trigger background task for regeneration
+        background_tasks.add_task(
+            run_mission_background,
+            mission_id=mission_id,
+            mission_type=mission.get("agent_type"),
+            user_id=user_id,
+            feedback=request.feedback,
+            is_regeneration=True,
+            **mission.get("input_data", {})
+        )
     
     await db.update_mission(mission_id, **updates)
     

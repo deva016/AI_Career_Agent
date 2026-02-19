@@ -92,6 +92,7 @@ export interface InterviewRequest {
 export interface ApprovalRequest {
   approved: boolean;
   feedback?: string;
+  edited_content?: string;
 }
 
 export interface MissionsListResponse {

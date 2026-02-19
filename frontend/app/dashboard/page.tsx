@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState } from "react";
 import {
   Briefcase,
   Clock,
@@ -23,6 +24,7 @@ import {
   EmptyState,
   PageSkeleton,
   KPIStrip,
+  ReviewWorkbench,
 } from "@/components/dashboard";
 import { useMissions, useApproveMission } from "@/lib/hooks/use-missions";
 import { useDashboardStats } from "@/lib/hooks/use-dashboard-stats";
@@ -68,9 +70,30 @@ export default function DashboardPage() {
   const { approve } = useApproveMission();
   const { stats } = useDashboardStats();
 
+  const [reviewMission, setReviewMission] = useState<any>(null);
+
   const handleApprove = async (id: string) => {
+    const mission = missions.find(m => m.mission_id === id);
+    if (mission && mission.status === "waiting_approval") {
+      setReviewMission(mission);
+      return;
+    }
+
     const result = await approve(id, true);
     if (result.success) {
+      refetch();
+    }
+  };
+
+  const handleReviewClose = () => {
+    setReviewMission(null);
+    refetch();
+  };
+
+  const handleApproveFinal = async (id: string, feedback?: string, editedContent?: string) => {
+    const result = await approve(id, true, feedback, editedContent);
+    if (result.success) {
+      setReviewMission(null);
       refetch();
     }
   };
@@ -203,6 +226,25 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* HITL Review Workbench */}
+      {reviewMission && (
+        <ReviewWorkbench
+          isOpen={!!reviewMission}
+          onClose={handleReviewClose}
+          missionId={reviewMission.mission_id}
+          agent={AGENT_CONFIG[reviewMission.agent_type || ""]?.label || "Agent"}
+          oldContent={reviewMission.input_data?.job_description || "Base Profile Content"}
+          newContent={reviewMission.artifacts?.[0]?.content || reviewMission.output_data?.content || "AI Generated Content"}
+          reasoning={reviewMission.output_data?.reasoning || []}
+          onApprove={handleApproveFinal}
+          onRegenerate={handleRegenerate}
+          onManualEdit={(id, content) => {
+            console.log("Manual edit on", id, content);
+            // In a real app, this would call an API to update the draft
+          }}
+        />
+      )}
     </motion.div>
   );
 }

@@ -66,8 +66,23 @@ class ATSAutomation:
         
         # Handle custom questions (if answers provided)
         if answers:
-            # Logic to find questions and match keys
-            pass
+            logger.info(f"Handling {len(answers)} custom questions for Greenhouse")
+            for question_text, answer in answers.items():
+                try:
+                    # Greenhouse custom questions are typically in divs or labels
+                    # We'll search for the label that matches the question text or a substring
+                    potential_labels = await page.query_selector_all("label")
+                    for label in potential_labels:
+                        label_text = await label.inner_text()
+                        if question_text.lower() in label_text.lower():
+                            # Find the corresponding input (associated via 'for' attribute)
+                            for_attr = await label.get_attribute("for")
+                            if for_attr:
+                                await page.fill(f"#{for_attr}", answer)
+                                logger.debug(f"Answered Greenhouse question: {question_text}")
+                                break
+                except Exception as e:
+                    logger.error(f"Error answering Greenhouse question '{question_text}': {e}")
             
         # Logged in/out state check (HITL usually handles this or resume_agent)
         logger.info(f"Greenhouse form filled for {url}")

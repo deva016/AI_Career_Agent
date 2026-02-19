@@ -51,7 +51,7 @@ class LinkedInScraper(BaseScraper):
             cards = await page.query_selector_all(".base-card, .job-search-card")
             logger.info(f"Found {len(cards)} job cards on LinkedIn")
             
-            for card in cards[:20]: # Limit for demo/testing
+            for card in cards[:10]: # Limit for audit/verification
                 try:
                     title_elem = await card.query_selector(".base-search-card__title, .job-search-card__title")
                     company_elem = await card.query_selector(".base-search-card__subtitle, .job-search-card__subtitle")
@@ -66,9 +66,18 @@ class LinkedInScraper(BaseScraper):
                     location_val = (await location_elem.inner_text()).strip() if location_elem else location
                     url = await link_elem.get_attribute("href")
                     
-                    # Basic description from snippet or just a placeholder
-                    # Full description requires navigating to each job page
-                    description = f"Job listing for {title} at {company} in {location_val}."
+                    # --- RECTIFIED: Extract Full Description ---
+                    # Click the card to load details in the side panel (typical LinkedIn UX)
+                    await card.click()
+                    await self.random_delay(1, 2)
+                    
+                    # Try common selectors for the description panel
+                    desc_elem = await page.query_selector(".show-more-less-html__markup, .description__text, .job-view-layout")
+                    if desc_elem:
+                        description = (await desc_elem.inner_text()).strip()
+                    else:
+                        description = f"Full description for {title} at {company} could not be parsed automatically. Visit {url} for details."
+                        logger.warning(f"Failed to extract description for {title}")
                     
                     jobs.append({
                         "title": title,
