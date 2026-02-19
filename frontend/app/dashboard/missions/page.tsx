@@ -46,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ReviewWorkbench } from "@/components/dashboard/review-workbench";
 
 // Map backend status to frontend status
 function mapMissionStatus(backendStatus: string): "executing" | "needs_review" | "thinking" | "completed" {
@@ -67,6 +68,7 @@ export default function MissionsPage() {
   const { toast } = useToast();
   const [launching, setLaunching] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [reviewMission, setReviewMission] = useState<any>(null);
 
   const handleLaunchJobFinder = async (params: { query: string; target_roles: string[]; target_locations: string[] }) => {
     setLaunching(true);
@@ -91,17 +93,32 @@ export default function MissionsPage() {
     }
   };
 
-  const handleApprove = async (id: string) => {
-    const result = await approve(id, true);
+  const handleApprove = async (id: string, feedback?: string, edited_content?: string) => {
+    const mission = missions.find(m => m.mission_id === id);
+    if (!feedback && !edited_content && mission && mission.status === "waiting_approval" && !reviewMission) {
+      setReviewMission(mission);
+      return;
+    }
+
+    const result = await approve(id, true, feedback, edited_content);
     if (result.success) {
-      refetch();
+      setReviewMission(null);
+      setTimeout(refetch, 500);
     }
   };
 
-  const handleRegenerate = async (id: string) => {
-    const result = await approve(id, false, "Please regenerate");
+  const handleRegenerate = async (id: string, feedback?: string) => {
+    const result = await approve(id, false, feedback || "Please regenerate");
     if (result.success) {
-      refetch();
+      setReviewMission(null);
+      setTimeout(refetch, 500);
+    }
+  };
+
+  const handleEdit = (id: string) => {
+    const mission = missions.find(m => m.mission_id === id);
+    if (mission) {
+      setReviewMission(mission);
     }
   };
 
@@ -175,6 +192,11 @@ export default function MissionsPage() {
                 }}
                 onApprove={handleApprove}
                 onRegenerate={handleRegenerate}
+                onEdit={handleEdit}
+                onViewArtifact={(id) => {
+                   const m = missions.find(x => x.mission_id === id);
+                   if (m) setReviewMission(m);
+                }}
               />
             </motion.div>
             );
@@ -199,6 +221,26 @@ export default function MissionsPage() {
         onLaunch={handleLaunchJobFinder}
         isLaunching={launching}
       />
+
+      {reviewMission && (
+        <ReviewWorkbench
+          isOpen={!!reviewMission}
+          onClose={() => {
+            setReviewMission(null);
+            refetch();
+          }}
+          missionId={reviewMission.mission_id}
+          agent={AGENT_CONFIG[reviewMission.agent_type || ""]?.label || "Agent"}
+          oldContent={reviewMission.input_data?.job_description || "Base Profile Content"}
+          newContent={reviewMission.artifacts?.[0]?.content || reviewMission.output_data?.content || "AI Generated Content"}
+          reasoning={reviewMission.output_data?.reasoning || []}
+          onApprove={handleApprove}
+          onRegenerate={handleRegenerate}
+          onManualEdit={(id, content) => {
+            console.log("Manual edit on", id, content);
+          }}
+        />
+      )}
     </motion.div>
   );
 }

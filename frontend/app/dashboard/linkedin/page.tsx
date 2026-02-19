@@ -20,13 +20,19 @@ export default function LinkedInPage() {
   const [content, setContent] = useState("");
   const [generating, setGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState("editor");
+  const [topic, setTopic] = useState("");
+  const [context, setContext] = useState("");
   const { toast } = useToast();
 
   const handleGenerate = async () => {
+    if (!topic) {
+      toast({ title: "Topic Required", description: "Please enter a topic for the post.", variant: "destructive" });
+      return;
+    }
     setGenerating(true);
     try {
-      const result = await generatePost("AI Career Growth", "Talking about how agents are changing the job search landscape.");
-      setContent(result.post?.content || "");
+      const result = await generatePost(topic, context || "Professional career growth context.");
+      setContent(result.post?.content || result.draft || "");
       toast({ title: "Post Generated! ✨", description: "AI has crafted a narrative for you." });
     } catch (err) {
       toast({ 
@@ -37,6 +43,20 @@ export default function LinkedInPage() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handlePublish = async (isScheduled: boolean = false) => {
+    if (!content) {
+      toast({ title: "Content Required", description: "Please write or generate some content first.", variant: "destructive" });
+      return;
+    }
+    
+    toast({ 
+      title: isScheduled ? "Post Scheduled! 📅" : "Post Published! 🚀", 
+      description: "Your professional update is on its way." 
+    });
+    // In a final implementation, this would call AgentClient.approveMission if it's a mission
+    // or a dedicated LinkedIn publish endpoint.
   };
 
   if (loading && posts.length === 0) {

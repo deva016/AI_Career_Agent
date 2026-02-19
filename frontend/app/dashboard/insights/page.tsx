@@ -9,6 +9,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, AreaChart, Area
 } from "recharts";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const skillData = [
   { subject: 'Frontend', A: 120, fullMark: 150 },
@@ -29,6 +30,15 @@ const trendData = [
 ];
 
 export default function InsightsPage() {
+  const { toast } = useToast();
+
+  const handleExplore = () => {
+    toast({
+      title: "Course Catalog Opening... 🚀",
+      description: "Redirecting to Cloud Native Architecture tracks.",
+    });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -167,7 +177,10 @@ export default function InsightsPage() {
                <p className="text-sm font-medium leading-relaxed">
                   Bridge your 12% market gap by taking our recommended "Cloud Native Architecture" track.
                </p>
-               <Button className="w-full bg-white text-primary font-bold hover:bg-white/90">
+               <Button 
+                onClick={handleExplore}
+                className="w-full bg-white text-primary font-bold hover:bg-white/90"
+               >
                   Explore Courses
                </Button>
             </CardContent>

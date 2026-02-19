@@ -12,9 +12,34 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 
 export default function InterviewPage() {
   const [activeTab, setActiveTab] = useState("practice");
+  const [response, setResponse] = useState("");
+  const { toast } = useToast();
+
+  const handleStartSession = () => {
+    toast({
+      title: "Session Starting 🎙️",
+      description: "AI Interviewer is preparing for TechFlow Solutions conversation.",
+    });
+  };
+
+  const handleAnalyze = () => {
+    if (!response) {
+      toast({
+        title: "Empty Response",
+        description: "Please type your answer before analyzing.",
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Analyzing Response... 🧠",
+      description: "Comparing your answer against the STAR method requirements.",
+    });
+  };
 
   return (
     <motion.div
@@ -28,9 +53,7 @@ export default function InterviewPage() {
         action={{
           label: "Start Mock Session",
           icon: Play,
-          onClick: () => {
-             alert("Interview simulation starting...");
-          }
+          onClick: handleStartSession
         }}
       />
 
@@ -63,12 +86,19 @@ export default function InterviewPage() {
                        <textarea 
                           className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all font-sans leading-relaxed"
                           placeholder="Structure your answer using the STAR method (Situation, Task, Action, Result)..."
+                          value={response}
+                          onChange={(e) => setResponse(e.target.value)}
                        />
                        <div className="flex justify-between items-center">
                           <p className="text-[10px] text-muted-foreground italic">Tip: Focus on the 'Action' taken and the measurable 'Result'.</p>
                           <div className="flex gap-2">
                              <Button variant="ghost" className="h-10 text-xs">Save for Later</Button>
-                             <Button className="h-10 bg-primary text-white font-bold px-8 shadow-lg shadow-primary/20">Analyze Answer</Button>
+                             <Button 
+                               onClick={handleAnalyze}
+                               className="h-10 bg-primary text-white font-bold px-8 shadow-lg shadow-primary/20"
+                             >
+                               Analyze Answer
+                             </Button>
                           </div>
                        </div>
                     </div>
