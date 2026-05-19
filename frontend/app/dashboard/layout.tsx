@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/dashboard";
+import { Toaster } from "sonner";
 
 export default function DashboardLayout({
   children,
@@ -14,10 +15,21 @@ export default function DashboardLayout({
         <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px] pointer-events-none" />
         
         {/* Content area */}
-        <div className="p-4 md:p-8 pt-20 md:pt-8 relative z-10">
+        <div className="p-4 md:p-8 pt-20 md:pt-8 relative">
           {children}
         </div>
       </main>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "hsl(224 71% 4%)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            color: "#fff",
+          },
+        }}
+        richColors
+      />
     </div>
   );
 }

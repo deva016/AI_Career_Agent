@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-color: #0d1117; /* Dark GitHub-like background to match your aesthetic */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .terminal {
+            width: 850px;
+            background-color: #000000;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background-color: #1a1a1a;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        .buttons {
+            display: flex;
+            gap: 8px;
+            margin-left: 10px;
+        }
+        .button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .close { background-color: #ff5f56; }
+        .minimize { background-color: #ffbd2e; }
+        .maximize { background-color: #27c93f; }
+        .title {
+            color: #a1a1aa;
+            font-size: 13px;
+            text-align: center;
+            flex-grow: 1;
+            margin-right: 56px;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        .content {
+            padding: 24px;
+            color: #e4e4e7;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+        .time { color: #71717a; } /* Gray */
+        .info { color: #3b82f6; font-weight: bold; } /* Blue */
+        .warn { color: #f59e0b; font-weight: bold; } /* Amber */
+        .system { color: #ec4899; font-weight: bold; } /* Pink */
+        .agent-discovery { color: #a855f7; font-weight: bold; } /* Purple */
+        .agent-semantic { color: #10b981; font-weight: bold; } /* Emerald */
+        .agent-tailoring { color: #f97316; font-weight: bold; } /* Orange */
+        .agent-linkedin { color: #06b6d4; font-weight: bold; } /* Cyan */
+        
+        .line { margin-bottom: 6px; }
+        .bold { font-weight: bold; }
+        .highlight { color: #eab308; } /* Yellow */
+        .success { color: #22c55e;} /* Green */
+        .red { color: #ef4444; font-weight: bold;}
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="header">
+            <div class="buttons">
+                <div class="button close"></div>
+                <div class="button minimize"></div>
+                <div class="button maximize"></div>
+            </div>
+            <div class="title">bash - langgraph-swarm - python worker.py</div>
+        </div>
+        <div class="content">
+            <div class="line"><span class="time">[10:45:01]</span> <span class="system">[System]</span> Initializing LangGraph Swarm Orchestration...</div>
+            <div class="line"><span class="time">[10:45:02]</span> <span class="info">[INFO]</span> <span class="agent-discovery">[Discovery Agent]</span> 📡 Ingesting JD: <span class="highlight">'Senior Data Analyst'</span> at Acme Corp</div>
+            <div class="line"><span class="time">[10:45:03]</span> <span class="info">[INFO]</span> <span class="agent-discovery">[Discovery Agent]</span> <span class="success">✅ Extraction complete.</span> Emitting job context to Swarm bus.</div>
+            <div class="line"><span class="time">[10:45:03]</span> <span class="warn">[WARN]</span> <span class="agent-semantic">[Semantic Analyst]</span> 🧠 Missed exact match for 'Tableau'. Querying pgvector for alternatives...</div>
+            <div class="line"><span class="time">[10:45:04]</span> <span class="info">[INFO]</span> <span class="agent-semantic">[Semantic Analyst]</span> 🎯 Semantic Match found: 'Power BI' (Similarity: 0.89). Injecting context.</div>
+            <div class="line"><span class="time">[10:45:04]</span> <span class="info">[INFO]</span> <span class="agent-tailoring">[Tailoring Agent]</span> ✍️ Generating ATS-optimized Resume via RAG... </div>
+            <div class="line"><span class="time">[10:45:07]</span> <span class="info">[INFO]</span> <span class="agent-tailoring">[Tailoring Agent]</span> ✍️ Compiling Custom Cover Letter payload...</div>
+            <div class="line"><span class="time">[10:45:09]</span> <span class="info">[INFO]</span> <span class="agent-linkedin">[LinkedIn Agent]</span> 📝 Drafting social post about 'Data Analysis Architecture'...</div>
+            <div class="line"><br></div>
+            <div class="line"><span class="time">[10:45:10]</span> <span class="system">[System]</span> <span class="red">🛑 HITL INTERRUPT: Swarm execution paused.</span> </div>
+            <div class="line"><span class="time">[10:45:10]</span> <span class="system">[System]</span> <span class="red">🛑 Awaiting Human Approval in Next.js Command Center...</span></div>
+            <div class="line"><span class="time">[10:45:10]</span> <span class="time">Waiting for user input... █</span></div>
+        </div>
+    </div>
+</body>
+</html>

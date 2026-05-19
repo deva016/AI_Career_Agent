@@ -61,6 +61,7 @@ export interface JobFinderRequest {
 }
 
 export interface ResumeTailorRequest {
+  resume_id?: string;
   job_id?: string;
   job_description?: string;
   job_title?: string;
@@ -104,4 +105,21 @@ export interface MissionsFilter {
   status?: MissionStatus;
   limit?: number;
   offset?: number;
+}
+
+export interface UserSettings {
+  user_id: string;
+  name: string;
+  email: string;
+  target_roles: string[];
+  target_locations: string[];
+  knowledge_base: Record<string, any>;
+  [key: string]: any;
+}
+
+export interface UserSettingsUpdate {
+  name?: string;
+  target_roles?: string[];
+  target_locations?: string[];
+  knowledge_base?: Record<string, any>;
 }

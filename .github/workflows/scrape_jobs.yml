@@ -1,0 +1,32 @@
+name: Daily Job Scraping
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Every day at midnight
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          cd agent-service
+          pip install -r requirements.txt
+          playwright install chromium
+          
+      - name: Run Job Finder Agent
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          cd agent-service
+          # This assumes a script entrypoint for the scraper
+          python -m agents.job_finder --all-users

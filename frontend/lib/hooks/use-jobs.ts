@@ -1,6 +1,5 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
+import { agentClient } from "@/lib/api/agent-client";
 
 export interface Job {
   id: string;
@@ -22,23 +21,31 @@ export function useJobs(filters: { status?: string; limit?: number; offset?: num
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams();
-      if (filters.status && filters.status !== "all") queryParams.append("status", filters.status);
-      if (filters.limit) queryParams.append("limit", filters.limit.toString());
-      if (filters.offset) queryParams.append("offset", filters.offset.toString());
+      // Compatibility: agentClient.listJobs returns MissionsListResponse usually, 
+      // but we need to fetch jobs specifically. Let's make sure it handles /api/jobs
+      const response = await fetch(`/api/jobs?${new URLSearchParams({
+        ...(filters.status && filters.status !== "all" && { status: filters.status }),
+        ...(filters.limit && { limit: filters.limit.toString() }),
+        ...(filters.offset && { offset: filters.offset.toString() }),
+      }).toString()}`);
 
-      const response = await fetch(`/api/jobs?${queryParams.toString()}`);
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to fetch jobs");
+        throw new Error("Failed to fetch jobs");
       }
       
       const data = await response.json();
-      setJobs(Array.isArray(data) ? data : data.jobs || []);
+      if (Array.isArray(data)) {
+         setJobs(data);
+         setTotal(data.length);
+      } else {
+         setJobs(data.jobs || []);
+         setTotal(data.total || 0);
+      }
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -51,5 +58,27 @@ export function useJobs(filters: { status?: string; limit?: number; offset?: num
     fetchJobs();
   }, [fetchJobs]);
 
-  return { jobs, loading, error, refetch: fetchJobs };
+  return { jobs, total, loading, error, refetch: fetchJobs };
+}
+
+export function useUpdateJobStatus() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const updateStatus = useCallback(async (jobId: string, status: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await agentClient.updateJobStatus(jobId, status);
+      return { success: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update job status";
+      setError(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { updateStatus, loading, error };
 }

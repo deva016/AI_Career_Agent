@@ -7,6 +7,7 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import LinkedInProvider from "next-auth/providers/linkedin";
+import CredentialsProvider from "next-auth/providers/credentials";
 import PostgresAdapter from "@auth/pg-adapter";
 import { Pool } from "pg";
 
@@ -55,12 +56,24 @@ export const authOptions: NextAuthOptions = {
     error: "/auth/error",
   },
   callbacks: {
-    async session({ session, user }: any) {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+      }
+      return token;
+    },
+    async session({ session, token, user }: any) {
       if (session.user) {
-        session.user.id = user.id;
+        session.user.id = user?.id || token?.id;
+        session.user.name = user?.name || token?.name;
       }
       return session;
     },
+  },
+  session: {
+    strategy: "jwt"
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

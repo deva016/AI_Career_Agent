@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Share2, Sparkles, Send, Calendar, Wand2, User, Globe, ThumbsUp, MessageSquare, Repeat2, Send as SendIcon, Zap } from "lucide-react";
+import { Share2, Sparkles, Send, Calendar, Wand2, User, Globe, ThumbsUp, MessageSquare, Repeat2, Send as SendIcon, Zap, History, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import {
   DashboardHeader,
@@ -15,14 +15,30 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
+const ITEMS_PER_PAGE = 6;
+
 export default function LinkedInPage() {
-  const { posts, loading, error, generatePost } = useLinkedIn();
+  const [offset, setOffset] = useState(0);
+  const { posts, total, loading, error, generatePost, publishPost } = useLinkedIn({ limit: ITEMS_PER_PAGE, offset });
   const [content, setContent] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [lastGeneratedPostId, setLastGeneratedPostId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("editor");
   const [topic, setTopic] = useState("");
   const [context, setContext] = useState("");
   const { toast } = useToast();
+
+  const handleNext = () => {
+    if (offset + ITEMS_PER_PAGE < total) {
+      setOffset(prev => prev + ITEMS_PER_PAGE);
+    }
+  };
+
+  const handlePrev = () => {
+    if (offset - ITEMS_PER_PAGE >= 0) {
+      setOffset(prev => prev - ITEMS_PER_PAGE);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!topic) {
@@ -32,8 +48,14 @@ export default function LinkedInPage() {
     setGenerating(true);
     try {
       const result = await generatePost(topic, context || "Professional career growth context.");
-      setContent(result.post?.content || result.draft || "");
-      toast({ title: "Post Generated! ✨", description: "AI has crafted a narrative for you." });
+      const generatedContent = result.content || result.post?.content || result.draft || "";
+      if (generatedContent) {
+        setContent(generatedContent);
+        setLastGeneratedPostId(result.id);
+        toast({ title: "Post Generated! ✨", description: "AI has crafted a narrative for you." });
+      } else {
+        toast({ title: "Generation Issue", description: "Post was saved but content is empty. Check the backend logs.", variant: "destructive" });
+      }
     } catch (err) {
       toast({ 
         title: "Generation Failed", 
@@ -50,13 +72,21 @@ export default function LinkedInPage() {
       toast({ title: "Content Required", description: "Please write or generate some content first.", variant: "destructive" });
       return;
     }
+
+    if (!lastGeneratedPostId) {
+      toast({ title: "Save Draft First", description: "Please save or generate the post content before publishing.", variant: "destructive" });
+      return;
+    }
     
-    toast({ 
-      title: isScheduled ? "Post Scheduled! 📅" : "Post Published! 🚀", 
-      description: "Your professional update is on its way." 
-    });
-    // In a final implementation, this would call AgentClient.approveMission if it's a mission
-    // or a dedicated LinkedIn publish endpoint.
+    try {
+      await publishPost(lastGeneratedPostId, content, isScheduled ? new Date(Date.now() + 86400000) : undefined);
+      toast({ 
+        title: isScheduled ? "Post Scheduled! 📅" : "Post Published! 🚀", 
+        description: isScheduled ? "Your post is queued for tomorrow." : "Your professional update is live." 
+      });
+    } catch (err) {
+      toast({ title: "Action Failed", description: "Could not sync with LinkedIn service.", variant: "destructive" });
+    }
   };
 
   if (loading && posts.length === 0) {
@@ -86,48 +116,76 @@ export default function LinkedInPage() {
               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                  <Zap className="w-32 h-32" />
               </div>
-              <CardContent className="p-0 flex-1 flex flex-col">
-                 <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-                    <div className="flex items-center gap-2">
-                       <Wand2 className="w-4 h-4 text-primary" />
-                       <span className="text-xs font-bold uppercase tracking-widest text-white">Post Studio</span>
-                    </div>
-                    <div className="flex gap-2">
-                       {['Professional', 'Bold', 'Narrative'].map(tone => (
-                         <Badge key={tone} variant="outline" className="text-[10px] cursor-pointer hover:bg-primary/20 border-white/10 text-muted-foreground hover:text-primary transition-colors">
-                           {tone}
-                         </Badge>
-                       ))}
-                    </div>
-                 </div>
-                 <textarea 
-                    className="flex-1 p-6 bg-transparent border-none focus:ring-0 text-foreground resize-none font-sans leading-relaxed text-sm placeholder:text-muted-foreground/30 focus:outline-none"
-                    placeholder="Capture your professional thoughts or let AI generate a post from your recent wins..."
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                 />
-                 <div className="p-4 border-t border-white/5 bg-white/5 flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground font-medium">
-                       {content.length} / 3000 characters
-                    </span>
-                    <div className="flex gap-2">
-                       <Button variant="ghost" size="sm" className="h-8 text-[10px] hover:bg-white/5">Save Draft</Button>
-                       <Button size="sm" className="h-8 text-[10px] bg-primary hover:bg-primary/90">Preview Mode</Button>
-                    </div>
-                 </div>
-              </CardContent>
-           </Card>
+               <CardContent className="p-0 flex-1 flex flex-col">
+                  <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
+                     <div className="flex items-center gap-2">
+                        <Wand2 className="w-4 h-4 text-primary" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-white">Post Studio</span>
+                     </div>
+                     <div className="flex gap-2">
+                        {['Professional', 'Bold', 'Narrative'].map(tone => (
+                          <Badge key={tone} variant="outline" className="text-[10px] cursor-pointer hover:bg-primary/20 border-white/10 text-muted-foreground hover:text-primary transition-colors">
+                            {tone}
+                          </Badge>
+                        ))}
+                     </div>
+                  </div>
+                  {/* AI Input Fields */}
+                  <div className="px-6 pt-4 pb-3 border-b border-white/5 space-y-3">
+                     <div>
+                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Topic *</label>
+                        <input
+                           className="w-full mt-1 bg-transparent border-b border-white/10 focus:border-primary/50 text-sm text-white focus:outline-none py-1 placeholder:text-muted-foreground/30 transition-colors"
+                           placeholder="e.g. My journey into Cloud Native architecture"
+                           value={topic}
+                           onChange={(e) => setTopic(e.target.value)}
+                        />
+                     </div>
+                     <div>
+                        <label className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Additional Context (optional)</label>
+                        <input
+                           className="w-full mt-1 bg-transparent border-b border-white/10 focus:border-primary/50 text-sm text-white focus:outline-none py-1 placeholder:text-muted-foreground/30 transition-colors"
+                           placeholder="e.g. Mention the AWS certification I just passed"
+                           value={context}
+                           onChange={(e) => setContext(e.target.value)}
+                        />
+                     </div>
+                  </div>
+                  <textarea 
+                     className="flex-1 p-6 bg-transparent border-none focus:ring-0 text-foreground resize-none font-sans leading-relaxed text-sm placeholder:text-muted-foreground/30 focus:outline-none"
+                     placeholder="Capture your professional thoughts or let AI generate a post from your recent wins..."
+                     value={content}
+                     onChange={(e) => setContent(e.target.value)}
+                  />
+                  <div className="p-4 border-t border-white/5 bg-white/5 flex items-center justify-between">
+                     <span className="text-[10px] text-muted-foreground font-medium">
+                        {content.length} / 3000 characters
+                     </span>
+                     <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 text-[10px] hover:bg-white/5">Save Draft</Button>
+                        <Button size="sm" className="h-8 text-[10px] bg-primary hover:bg-primary/90">Preview Mode</Button>
+                     </div>
+                  </div>
+               </CardContent>
+            </Card>
 
-           <div className="flex gap-4">
-              <Button className="flex-1 h-12 bg-primary text-white font-bold gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all">
-                 <Calendar className="w-4 h-4" />
-                 Schedule Publication
-              </Button>
-              <Button variant="outline" className="h-12 px-6 border-white/10 hover:bg-white/5 gap-2">
-                 <Send className="w-4 h-4" />
-                 Post Now
-              </Button>
-           </div>
+            <div className="flex gap-4">
+               <Button
+                  onClick={() => handlePublish(true)}
+                  className="flex-1 h-12 bg-primary text-white font-bold gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all"
+               >
+                  <Calendar className="w-4 h-4" />
+                  Schedule Publication
+               </Button>
+               <Button
+                  onClick={() => handlePublish(false)}
+                  variant="outline"
+                  className="h-12 px-6 border-white/10 hover:bg-white/5 gap-2"
+               >
+                  <Send className="w-4 h-4" />
+                  Post Now
+               </Button>
+            </div>
         </div>
 
         {/* Right Column: LinkedIn Preview */}
@@ -197,6 +255,69 @@ export default function LinkedInPage() {
               </p>
            </div>
         </div>
+      </div>
+
+      <div className="space-y-4">
+         <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+               <History className="w-4 h-4 text-primary" />
+               Post History
+            </h3>
+            {total > 0 && (
+               <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">
+                    {offset + 1}-{Math.min(offset + ITEMS_PER_PAGE, total)} of {total}
+                  </span>
+                  <div className="flex gap-1">
+                     <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7 border-white/10 hover:bg-white/10"
+                        onClick={handlePrev}
+                        disabled={offset === 0}
+                     >
+                        <ChevronLeft className="w-3 h-3" />
+                     </Button>
+                     <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7 border-white/10 hover:bg-white/10"
+                        onClick={handleNext}
+                        disabled={offset + ITEMS_PER_PAGE >= total}
+                     >
+                        <ChevronRight className="w-3 h-3" />
+                     </Button>
+                  </div>
+               </div>
+            )}
+         </div>
+         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {posts.length > 0 ? (
+               posts.map((post) => (
+                  <Card key={post.id} className="bg-white/5 border-white/5 hover:border-primary/30 transition-colors group cursor-pointer">
+                     <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                           <Badge variant="outline" className={`text-[9px] uppercase ${
+                              post.status === 'published' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                              post.status === 'scheduled' ? 'bg-primary/10 text-primary border-primary/20' :
+                              'bg-white/5 text-muted-foreground border-white/10'
+                           }`}>
+                              {post.status}
+                           </Badge>
+                           <span className="text-[10px] text-muted-foreground">{new Date(post.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed group-hover:text-gray-300 transition-colors">
+                           {post.content}
+                        </p>
+                     </CardContent>
+                  </Card>
+               ))
+            ) : (
+               <div className="col-span-full py-12 text-center rounded-2xl border border-dashed border-white/5 bg-white/5">
+                  <p className="text-sm text-muted-foreground">No draft history yet. Start creating!</p>
+               </div>
+            )}
+         </div>
       </div>
     </motion.div>
   );

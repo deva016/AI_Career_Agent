@@ -10,6 +10,9 @@ from typing import AsyncGenerator, Optional, Literal
 import tiktoken
 
 from core.config import get_settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient:
@@ -23,11 +26,34 @@ class LLMClient:
         self.mode = mode or self.settings.default_model_mode
         self.model = self.settings.free_model if self.mode == "free" else self.settings.paid_model
         
-        # OpenAI-compatible client for OpenRouter
-        self.client = AsyncOpenAI(
-            api_key=self.settings.openrouter_api_key,
-            base_url=self.settings.openrouter_base_url,
-        )
+        # Initialize primary and backup clients
+        self.providers = []
+        
+        # 1. Gemini (Primary)
+        if self.settings.gemini_api_key:
+            self.providers.append({
+                "name": "Gemini",
+                "client": AsyncOpenAI(
+                    api_key=self.settings.gemini_api_key,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+                ),
+                "model": self.settings.gemini_model,
+                "is_openrouter": False
+            })
+
+        # 2. OpenRouter (Backup)
+        if self.settings.openrouter_api_key:
+            self.providers.append({
+                "name": "OpenRouter",
+                "client": AsyncOpenAI(
+                    api_key=self.settings.openrouter_api_key,
+                    base_url=self.settings.openrouter_base_url,
+                ),
+                "model": self.model,
+                "is_openrouter": True
+            })
+        
+        # Token counter (approximate)
         
         # Token counter (approximate)
         try:
@@ -42,70 +68,118 @@ class LLMClient:
     async def chat(
         self,
         messages: list[dict],
-        temperature: float = 0.7,
+        temperature: Optional[float] = None,
         max_tokens: int = 2048,
-        max_retries: int = 3,
+        max_retries: int = None, # Calculated based on providers
+        on_retry: Optional[callable] = None,
     ) -> str:
-        """
-        Send a chat completion request with retry logic.
-        
-        Args:
-            messages: List of message dicts with 'role' and 'content'
-            temperature: Sampling temperature (0-2)
-            max_tokens: Maximum tokens in response
-            max_retries: Maximum number of retry attempts
-            
-        Returns:
-            The assistant's response text
-            
-        Raises:
-            Exception: If all retries fail
-        """
         import asyncio
-        from openai import RateLimitError, APIError, APITimeoutError
+        import random
+        from openai import RateLimitError, APIError, APITimeoutError, NotFoundError, BadRequestError
         
-        last_error = None
-        for attempt in range(max_retries):
+        temp = temperature if temperature is not None else self.settings.temperature
+        provider_idx = 0
+        current_messages = messages
+        system_instruction_hack_applied = False
+        
+        # We try each provider up to 2 times before moving to the next
+        # total attempts = num_providers * 2 (max 6)
+        total_attempts = len(self.providers) * 2
+        
+        for attempt in range(total_attempts):
+            provider = self.providers[provider_idx]
+            active_client = provider["client"]
+            active_model = provider["model"]
+            
+            # Linear failover: move to next provider every 2 attempts
+            # But only if we haven't already moved forward due to a hard failure
+            if attempt > 0 and attempt % 2 == 0:
+                if provider_idx < len(self.providers) - 1:
+                    provider_idx += 1
+                    provider = self.providers[provider_idx]
+                    active_client = provider["client"]
+                    active_model = provider["model"]
+                    
+                    msg = f"Primary failed. Switching to backup provider: {provider['name']}..."
+                    logger.warning(msg)
+                    if on_retry: await on_retry(msg)
+
             try:
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    extra_headers={
-                        "HTTP-Referer": "https://ai-career-agent.vercel.app",
-                        "X-Title": "AI Career Agent"
-                    }
+                response = await asyncio.wait_for(
+                    active_client.chat.completions.create(
+                        model=active_model,
+                        messages=current_messages,
+                        temperature=temp,
+                        max_tokens=max_tokens,
+                        extra_headers={
+                            "HTTP-Referer": "https://ai-career-agent.vercel.app",
+                            "X-Title": "AI Career Agent"
+                        } if provider["is_openrouter"] else {}
+                    ),
+                    timeout=60.0
                 )
                 return response.choices[0].message.content
-            except RateLimitError as e:
-                last_error = e
-                if attempt < max_retries - 1:
-                    # Exponential backoff: 2^attempt seconds
-                    wait_time = 2 ** attempt
-                    await asyncio.sleep(wait_time)
-                    continue
-                raise Exception(f"Rate limit exceeded after {max_retries} attempts") from e
-            except APITimeoutError as e:
-                last_error = e
-                if attempt < max_retries - 1:
+            except (RateLimitError, NotFoundError, BadRequestError, APIError) as e:
+                error_msg = str(e).lower()
+                
+                if ("developer instruction" in error_msg or "system message" in error_msg) and not system_instruction_hack_applied:
+                    logger.warning(f"System instructions rejected by {provider['name']}. Applying fallback...")
+                    new_messages = []
+                    system_content = ""
+                    first_user_idx = -1
+                    for i, msg in enumerate(messages):
+                        if msg["role"] == "system":
+                            system_content += msg["content"] + "\n\n"
+                        elif msg["role"] == "user" and first_user_idx == -1:
+                            first_user_idx = i
+                    if system_content:
+                        for i, msg in enumerate(messages):
+                            if msg["role"] == "system": continue
+                            if i == first_user_idx:
+                                new_messages.append({
+                                    "role": "user", 
+                                    "content": f"INSTRUCTIONS:\n{system_content}USER REQUEST: {msg['content']}"
+                                })
+                            else:
+                                new_messages.append(msg)
+                        current_messages = new_messages
+                        system_instruction_hack_applied = True
+                        continue
+
+                # Handling Hard Failures (Invalid Key, Quota Hit) -> Skip Provider Immediately
+                is_hard_failure = any(x in error_msg for x in ["402", "payment", "quota", "invalid", "400", "401"])
+                
+                if is_hard_failure:
+                    logger.error(f"Hard failure on {provider['name']}: {error_msg}")
+                    if len(self.providers) > provider_idx + 1:
+                        provider_idx += 1
+                        msg = f"{provider['name']} failed (Hard Error). Skipping to {self.providers[provider_idx]['name']}..."
+                        if on_retry: await on_retry(msg)
+                        continue 
+                    else:
+                        raise Exception(f"All providers exhausted. Last error ({provider['name']}): {e}") from e
+
+                # Handling Soft Failures (Rate Limit, Transient API Error) -> Backoff or Cascade
+                wait_time = (2 ** (attempt % 2)) + random.uniform(0.5, 1.5)
+                msg = f"{provider['name']} API issue. Retrying in {wait_time:.1f}s..."
+                logger.warning(msg)
+                if on_retry: await on_retry(msg)
+                
+                await asyncio.sleep(wait_time)
+                continue
+
+            except (APITimeoutError, asyncio.TimeoutError) as e:
+                logger.warning(f"Timeout on {provider['name']} (attempt {attempt+1})")
+                if attempt < total_attempts - 1:
                     await asyncio.sleep(1)
                     continue
-                raise Exception(f"API timeout after {max_retries} attempts") from e
-            except APIError as e:
-                last_error = e
-                # Don't retry on 4xx client errors (except rate limit)
-                if hasattr(e, 'status_code') and 400 <= e.status_code < 500:
-                    raise Exception(f"API client error: {e}") from e
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(1)
-                    continue
-                raise Exception(f"API error after {max_retries} attempts: {e}") from e
+                raise Exception(f"Timed out after {total_attempts} attempts across providers") from e
+                
             except Exception as e:
-                last_error = e
-                raise Exception(f"Unexpected error in LLM call: {e}") from e
+                logger.error(f"Unexpected error on {provider['name']}: {e}")
+                raise e
         
-        raise Exception(f"Failed after {max_retries} attempts") from last_error
+        raise Exception("Max attempts reached across all providers.")
     
     async def chat_stream(
         self,
@@ -115,19 +189,14 @@ class LLMClient:
     ) -> AsyncGenerator[str, None]:
         """
         Stream a chat completion response.
-        
-        Yields:
-            Text chunks as they arrive
-            
-        Raises:
-            Exception: If streaming fails
         """
         from openai import APIError
         
+        current_messages = messages
         try:
             stream = await self.client.chat.completions.create(
                 model=self.model,
-                messages=messages,
+                messages=current_messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 stream=True,
@@ -141,6 +210,48 @@ class LLMClient:
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
         except APIError as e:
+            error_msg = str(e).lower()
+            if "developer instruction" in error_msg or "system message" in error_msg:
+                # Merge system messages into the first user message
+                new_messages = []
+                system_content = ""
+                first_user_idx = -1
+                
+                for i, msg in enumerate(messages):
+                    if msg["role"] == "system":
+                        system_content += msg["content"] + "\n\n"
+                    elif msg["role"] == "user" and first_user_idx == -1:
+                        first_user_idx = i
+                
+                if system_content:
+                    for i, msg in enumerate(messages):
+                        if msg["role"] == "system":
+                            continue
+                        if i == first_user_idx:
+                            new_messages.append({
+                                "role": "user", 
+                                "content": f"INSTRUCTIONS:\n{system_content}USER REQUEST: {msg['content']}"
+                            })
+                        else:
+                            new_messages.append(msg)
+                    
+                    # Retry with the merged messages (not recursive to avoid infinite loops)
+                    stream = await self.client.chat.completions.create(
+                        model=self.model,
+                        messages=new_messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        stream=True,
+                        extra_headers={
+                            "HTTP-Referer": "https://ai-career-agent.vercel.app",
+                            "X-Title": "AI Career Agent"
+                        }
+                    )
+                    async for chunk in stream:
+                        if chunk.choices[0].delta.content:
+                            yield chunk.choices[0].delta.content
+                    return
+
             raise Exception(f"Streaming error: {e}") from e
         except Exception as e:
             raise Exception(f"Unexpected streaming error: {e}") from e
@@ -186,7 +297,7 @@ def get_langchain_llm(mode: Optional[Literal["free", "paid"]] = None) -> ChatOpe
             "HTTP-Referer": "https://ai-career-agent.vercel.app",
             "X-Title": "AI Career Agent"
         },
-        temperature=0.7,
+        temperature=settings.temperature,
         streaming=True,
     )
 

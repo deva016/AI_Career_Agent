@@ -16,7 +16,7 @@ import {
 } from "@/lib/types/agent";
 
 /**
- * Hook to fetch and manage a list of missions
+ * Hook to fetch and manage a list of missions with auto-polling
  */
 export function useMissions(filters?: MissionsFilter) {
   const [missions, setMissions] = useState<MissionResponse[]>([]);
@@ -42,6 +42,17 @@ export function useMissions(filters?: MissionsFilter) {
   useEffect(() => {
     fetchMissions();
   }, [fetchMissions]);
+
+  // Auto-poll when any mission is active (5s interval)
+  useEffect(() => {
+    const hasActive = missions.some((m) =>
+      isActiveMission(m.status)
+    );
+    if (!hasActive) return;
+
+    const interval = setInterval(fetchMissions, 5000);
+    return () => clearInterval(interval);
+  }, [missions, fetchMissions]);
 
   return {
     missions,

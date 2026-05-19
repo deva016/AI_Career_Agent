@@ -18,6 +18,7 @@ import {
   Zap,
   TrendingUp,
   Brain,
+  FolderOpen,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ const navItems = [
   { label: "Applications", icon: CheckSquare, href: "/dashboard/applications" },
   { label: "LinkedIn", icon: Share2, href: "/dashboard/linkedin" },
   { label: "Interview", icon: Brain, href: "/dashboard/interview" },
+  { label: "Documents", icon: FolderOpen, href: "/dashboard/artifacts" },
   { label: "Insights", icon: BarChart2, href: "/dashboard/insights" },
   { label: "Settings", icon: Settings, href: "/settings" },
 ];
@@ -46,15 +48,16 @@ export function Sidebar() {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <div className="p-6">
-        <Link href="/dashboard" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center border border-primary/30 group-hover:border-primary/50 transition-colors">
-            <Zap className="w-5 h-5 text-primary" />
+        <Link href="/dashboard" className="flex items-center gap-3 group relative">
+          <div className="absolute -inset-2 bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center border border-white/20 shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform duration-300 relative z-10">
+            <Zap className="w-5 h-5 text-white fill-white/20" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
+          <div className="relative z-10">
+            <h1 className="text-xl font-black bg-gradient-to-r from-white via-white to-primary/80 bg-clip-text text-transparent tracking-tight">
               AI Career
             </h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold -mt-1 opacity-70">
+            <p className="text-[9px] text-primary/60 uppercase tracking-[0.2em] font-black -mt-0.5">
               Command Center
             </p>
           </div>
@@ -69,9 +72,9 @@ export function Sidebar() {
               key={item.label}
               href={item.href}
               onClick={() => setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 relative group ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 relative group ${
                 isActive
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 text-primary shadow-[inset_0_0_20px_rgba(59,130,246,0.05)]"
                   : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
               }`}
             >
@@ -82,10 +85,12 @@ export function Sidebar() {
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 />
               )}
-              <item.icon className={`w-4 h-4 transition-transform duration-300 ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
-              <span className="text-sm font-medium">{item.label}</span>
+              <item.icon className={`w-4 h-4 transition-all duration-300 ${isActive ? "scale-110 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "group-hover:scale-110 group-hover:text-white"}`} />
+              <span className={`text-sm font-bold tracking-tight transition-colors ${isActive ? "text-white" : "group-hover:text-white"}`}>
+                {item.label}
+              </span>
               {item.label === "Missions" && (
-                <span className="ml-auto w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse" />
               )}
             </Link>
           );
@@ -94,45 +99,56 @@ export function Sidebar() {
 
       <div className="p-4 space-y-4">
         {/* AI Capacity Indicator */}
-        <div className="px-3 py-4 rounded-xl bg-white/5 border border-white/10 space-y-2 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="flex justify-between items-center text-[10px] text-muted-foreground uppercase tracking-wider font-extrabold relative z-10">
-            <span className="flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
+        <div className="px-5 py-5 rounded-2xl bg-gradient-to-br from-white/[0.03] to-white/[0.01] border border-white/10 space-y-3 relative overflow-hidden group shadow-xl">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+             <Brain className="w-8 h-8 text-primary" />
+          </div>
+          <div className="flex justify-between items-center text-[9px] text-white/40 uppercase tracking-[0.2em] font-black relative z-10">
+            <span className="flex items-center gap-1.5">
+              <Zap className="w-3 h-3 text-primary" />
               Efficiency
             </span>
-            <span className="text-primary">85%</span>
+            <span className="text-primary drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]">{session?.user ? "92%" : "0%"}</span>
           </div>
-          <Progress value={85} className="h-1.5 bg-white/10" />
-          <p className="text-[10px] text-muted-foreground leading-tight relative z-10 opacity-70">
-            Agents performing at peak capacity.
+          <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: session?.user ? "92%" : "0%" }}
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-purple-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground leading-relaxed relative z-10 font-medium italic opacity-70">
+            Agents active & performing at peak capacity.
           </p>
         </div>
 
-        <Separator className="bg-white/10" />
+        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         
-        <div className="flex items-center gap-3 px-2">
-          <Avatar className="w-9 h-9 border border-white/10">
-            <AvatarImage src={session?.user?.image || ""} />
-            <AvatarFallback className="bg-primary/20 text-primary text-xs">
-              {session?.user?.name?.[0] || "U"}
-            </AvatarFallback>
-          </Avatar>
+        <div className="flex items-center gap-3 px-2 pt-2">
+          <div className="relative">
+            <Avatar className="w-10 h-10 border border-white/10 shadow-lg group-hover:border-primary/50 transition-colors">
+              <AvatarImage src={session?.user?.image || ""} />
+              <AvatarFallback className="bg-gradient-to-br from-primary/20 to-purple-500/20 text-primary text-xs font-black">
+                {session?.user?.name?.[0] || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-black rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+          </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate text-foreground">
-              {session?.user?.name || "User"}
+            <p className="text-sm font-black truncate text-white tracking-tight">
+              {session?.user?.name || "User Name"}
             </p>
-            <p className="text-[10px] text-muted-foreground truncate font-medium">
-              Pro Member
+            <p className="text-[10px] text-primary/60 truncate font-black uppercase tracking-widest">
+              {session?.user ? "Elite Agent" : "Guest Mode"}
             </p>
           </div>
           <Button
             onClick={() => signOut({ callbackUrl: "/auth/signin" })}
             variant="ghost"
             size="icon"
-            className="text-muted-foreground h-8 w-8 hover:bg-red-500/10 hover:text-red-400 group"
+            className="text-white/20 h-9 w-9 hover:bg-red-500/10 hover:text-red-400 group/logout transition-all rounded-xl"
           >
-            <LogOut className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <LogOut className="w-4 h-4 transition-transform group-hover/logout:translate-x-1" />
           </Button>
         </div>
       </div>

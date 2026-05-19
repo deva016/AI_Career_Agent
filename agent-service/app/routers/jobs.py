@@ -62,13 +62,15 @@ async def list_jobs(
         status=status,
     )
     
+    total = await db.get_table_count("jobs", user_id, status)
+    
     return JobListResponse(
         jobs=[JobResponse(
             id=str(j["id"]),
             title=j["title"],
             company=j["company"],
             location=j["location"],
-            description=j["description"][:500] + "..." if len(j.get("description", "")) > 500 else j.get("description", ""),
+            description=j.get("description", "")[:200] + "..." if j.get("description") and len(j.get("description", "")) > 200 else j.get("description", ""),
             url=j.get("job_url", j.get("url", "")),
             source=j["source"],
             salary_range=j.get("salary_range"),
@@ -76,7 +78,7 @@ async def list_jobs(
             status=j.get("status", "new"),
             scraped_at=j.get("scraped_at"),
         ) for j in jobs],
-        total=len(jobs),
+        total=total,
         offset=offset,
         limit=limit,
     )
@@ -105,15 +107,20 @@ async def get_job(job_id: str, user_id: str = Depends(get_current_user)):
     )
 
 
+class JobStatusUpdate(BaseModel):
+    status: str
+
 @router.patch("/{job_id}/status")
 async def update_job_status(
     job_id: str,
-    status: str,
+    payload: JobStatusUpdate,
     user_id: str = Depends(get_current_user),
 ):
     """Update the status of a job (e.g., applied, rejected, saved)."""
-    # TODO: Implement update in database
-    return {"job_id": job_id, "status": status, "updated": True}
+    success = await db.update_job_status(job_id=job_id, status=payload.status, user_id=user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Job not found or access denied")
+    return {"job_id": job_id, "status": payload.status, "updated": True}
 
 
 @router.post("/search")

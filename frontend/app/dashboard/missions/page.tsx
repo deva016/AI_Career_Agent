@@ -3,8 +3,30 @@
 import { useState } from "react";
 import {
   Target, Plus, Filter, Bot, FileText, Send,
-  Linkedin, TrendingUp, Mic,
+  Linkedin, TrendingUp, Mic, ChevronLeft, ChevronRight
 } from "lucide-react";
+import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
+import { agentClient } from "@/lib/api/agent-client";
+import {
+  DashboardHeader,
+  MissionCard,
+  EmptyState,
+  PageSkeleton,
+  LaunchMissionModal,
+} from "@/components/dashboard";
+import { useMissions, useApproveMission } from "@/lib/hooks/use-missions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { ReviewWorkbench } from "@/components/dashboard/review-workbench";
+
+const ITEMS_PER_PAGE = 8;
 
 // Agent type display config
 const AGENT_CONFIG: Record<string, { label: string; icon: any }> = {
@@ -28,25 +50,6 @@ function formatTimeAgo(isoString?: string): string {
   if (diffHrs < 24) return `${diffHrs}h ago`;
   return `${Math.floor(diffHrs / 24)}d ago`;
 }
-import { motion } from "framer-motion";
-import { useToast } from "@/hooks/use-toast";
-import { agentClient } from "@/lib/api/agent-client";
-import {
-  DashboardHeader,
-  MissionCard,
-  EmptyState,
-  PageSkeleton,
-  LaunchMissionModal,
-} from "@/components/dashboard";
-import { useMissions, useApproveMission } from "@/lib/hooks/use-missions";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ReviewWorkbench } from "@/components/dashboard/review-workbench";
 
 // Map backend status to frontend status
 function mapMissionStatus(backendStatus: string): "executing" | "needs_review" | "thinking" | "completed" {
@@ -55,6 +58,7 @@ function mapMissionStatus(backendStatus: string): "executing" | "needs_review" |
     executing: "executing",
     pending: "thinking",
     waiting_approval: "needs_review",
+    needs_review: "needs_review",
     completed: "completed",
     failed: "completed",
   };
@@ -63,12 +67,35 @@ function mapMissionStatus(backendStatus: string): "executing" | "needs_review" |
 
 export default function MissionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const { missions, loading, error, refetch } = useMissions();
+  const [offset, setOffset] = useState(0);
+  
+  const { missions, total, loading, error, refetch } = useMissions({
+    status: statusFilter === "all" ? undefined : statusFilter as any,
+    limit: ITEMS_PER_PAGE,
+    offset
+  });
+  
   const { approve } = useApproveMission();
   const { toast } = useToast();
   const [launching, setLaunching] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reviewMission, setReviewMission] = useState<any>(null);
+
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+
+  const handleNext = () => {
+    if (offset + ITEMS_PER_PAGE < total) {
+      setOffset(prev => prev + ITEMS_PER_PAGE);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handlePrev = () => {
+    if (offset - ITEMS_PER_PAGE >= 0) {
+      setOffset(prev => prev - ITEMS_PER_PAGE);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   const handleLaunchJobFinder = async (params: { query: string; target_roles: string[]; target_locations: string[] }) => {
     setLaunching(true);
@@ -94,12 +121,6 @@ export default function MissionsPage() {
   };
 
   const handleApprove = async (id: string, feedback?: string, edited_content?: string) => {
-    const mission = missions.find(m => m.mission_id === id);
-    if (!feedback && !edited_content && mission && mission.status === "waiting_approval" && !reviewMission) {
-      setReviewMission(mission);
-      return;
-    }
-
     const result = await approve(id, true, feedback, edited_content);
     if (result.success) {
       setReviewMission(null);
@@ -122,11 +143,6 @@ export default function MissionsPage() {
     }
   };
 
-  const filteredMissions = missions.filter((m) => {
-    if (statusFilter === "all") return true;
-    return m.status === statusFilter;
-  });
-
   if (loading && missions.length === 0) {
     return <PageSkeleton />;
   }
@@ -146,7 +162,10 @@ export default function MissionsPage() {
           onClick: () => setIsModalOpen(true),
         }}
       >
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(val) => {
+          setStatusFilter(val);
+          setOffset(0);
+        }}>
           <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
             <Filter className="w-4 h-4 mr-2" />
             <SelectValue placeholder="Filter by status" />
@@ -168,39 +187,76 @@ export default function MissionsPage() {
         </div>
       )}
 
-      {filteredMissions.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-20">
-          {filteredMissions.map((mission, idx) => {
-            const config = AGENT_CONFIG[mission.agent_type || ""] || { label: mission.current_node || "Agent", icon: Bot };
-            return (
-            <motion.div
-              key={mission.mission_id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05 }}
-            >
+      {missions.length > 0 ? (
+        <div className="space-y-10 pb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {missions.map((mission, idx) => {
+              const config = AGENT_CONFIG[mission.agent_type || ""] || { label: mission.current_node || "Agent", icon: Bot };
+              return (
+              <motion.div
+                key={mission.mission_id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+              >
               <MissionCard
-                mission={{
-                  id: mission.mission_id,
-                  agent: config.label,
-                  icon: config.icon,
-                  status: mapMissionStatus(mission.status.toString()),
-                  statusLabel: mission.status.replace("_", " "),
-                  progress: mission.progress || 0,
-                  timestamp: formatTimeAgo(mission.created_at),
-                  artifact: mission.artifacts?.[0]?.title,
-                }}
-                onApprove={handleApprove}
-                onRegenerate={handleRegenerate}
-                onEdit={handleEdit}
-                onViewArtifact={(id) => {
-                   const m = missions.find(x => x.mission_id === id);
-                   if (m) setReviewMission(m);
-                }}
-              />
-            </motion.div>
-            );
-          })}
+                  mission={{
+                    id: mission.mission_id,
+                    agent: config.label,
+                    icon: config.icon,
+                    status: mapMissionStatus(mission.status.toString()),
+                    statusLabel: mission.status.replace("_", " "),
+                    progress: mission.progress || 0,
+                    timestamp: formatTimeAgo(mission.created_at),
+                    artifact: mission.artifacts?.[0]?.title,
+                    events: mission.events?.map((e) => ({
+                      type: e.type,
+                      message: e.message,
+                      timestamp: e.timestamp,
+                    })),
+                  }}
+                  onApprove={() => handleApprove(mission.mission_id)}
+                  onRegenerate={() => handleRegenerate(mission.mission_id)}
+                  onEdit={() => handleEdit(mission.mission_id)}
+                  onViewArtifact={() => setReviewMission(mission)}
+                />
+              </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-white/10 pt-6">
+              <p className="text-sm text-gray-400">
+                Page <span className="text-white font-medium">{offset / ITEMS_PER_PAGE + 1}</span> of{" "}
+                <span className="text-white font-medium">{totalPages}</span> 
+                {" "}(<span className="text-white font-medium">{total}</span> total)
+              </p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handlePrev}
+                  disabled={offset === 0}
+                  className="bg-white/5 border-white/10 hover:bg-white/10"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleNext}
+                  disabled={offset + ITEMS_PER_PAGE >= total}
+                  className="bg-white/5 border-white/10 hover:bg-white/10"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <EmptyState
@@ -231,9 +287,19 @@ export default function MissionsPage() {
           }}
           missionId={reviewMission.mission_id}
           agent={AGENT_CONFIG[reviewMission.agent_type || ""]?.label || "Agent"}
-          oldContent={reviewMission.input_data?.job_description || "Base Profile Content"}
-          newContent={reviewMission.artifacts?.[0]?.content || reviewMission.output_data?.content || "AI Generated Content"}
+          oldContent={
+            reviewMission.output_data?.original_resume || 
+            reviewMission.input_data?.original_resume || 
+            reviewMission.input_data?.job_description || 
+            "Base Profile Content"
+          }
+          newContent={
+            reviewMission.artifacts?.[0]?.content || 
+            reviewMission.output_data?.content || 
+            "AI Generated Content"
+          }
           reasoning={reviewMission.output_data?.reasoning || []}
+          similarityScore={reviewMission.output_data?.similarity_score}
           onApprove={handleApprove}
           onRegenerate={handleRegenerate}
           onManualEdit={(id, content) => {

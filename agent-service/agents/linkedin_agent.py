@@ -12,7 +12,8 @@ import uuid
 
 from graphs.state import (
     AgentState, MissionStatus, AgentType,
-    create_initial_state, update_status, MissionEvent, Artifact
+    create_initial_state, update_status, MissionEvent, Artifact,
+    get_retry_callback
 )
 from core.llm import LLMClient
 from core.database import db
@@ -81,12 +82,15 @@ async def generate_post(state: AgentState) -> Dict:
     context = state["context"]
     llm = LLMClient()
     
-    draft = await llm.simple_prompt(
-        LINKEDIN_POST_PROMPT.format(
-            topic=context["topic"],
-            context=context["post_context"]
-        ),
-        system="You are a LinkedIn personal branding expert."
+    draft = await llm.chat(
+        messages=[
+            {"role": "system", "content": "You are a LinkedIn personal branding expert."},
+            {"role": "user", "content": LINKEDIN_POST_PROMPT.format(
+                topic=context["topic"],
+                context=context["post_context"]
+            )}
+        ],
+        on_retry=get_retry_callback(state["mission_id"])
     )
     
     # Create artifact

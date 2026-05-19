@@ -1,48 +1,34 @@
-"""
-Logging configuration for the agent service.
-"""
-
 import logging
 import sys
-from pathlib import Path
+import os
+from logging.handlers import RotatingFileHandler
 
-
-def setup_logging(log_level: str =
-
- "INFO", log_file: str = None):
-    """
-    Configure logging for the application.
+def setup_logging():
+    """Configure logging to both stdout and a file."""
+    # Prevent duplicate handlers
+    root = logging.getLogger()
+    if root.handlers:
+        return
+        
+    log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     
-    Args:
-        log_level: Logging level (DEBUG, INFO, WARNING, ERROR)
-        log_file: Optional file path for file logging
-    """
-    # Create formatter
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
+    # Ensure log directory exists if needed (using current dir here)
+    log_file = "agent-service.log"
     
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
+    file_handler = RotatingFileHandler(log_file, maxBytes=1048576, backupCount=5)
+    file_handler.setFormatter(log_formatter)
     
-    # Root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(getattr(logging, log_level.upper()))
-    root_logger.addHandler(console_handler)
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setFormatter(log_formatter)
     
-    # File handler (optional)
-    if log_file:
-        log_path = Path(log_file)
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(formatter)
-        root_logger.addHandler(file_handler)
+    root.setLevel(logging.INFO)
+    root.addHandler(file_handler)
+    root.addHandler(stdout_handler)
     
-    # Set specific loggers
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("uvicorn").setLevel(logging.INFO)
-    logging.getLogger("asyncpg").setLevel(logging.WARNING)
-    
-    return root_logger
+    # Capture uvicorn logs
+    for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
+        l = logging.getLogger(logger_name)
+        l.handlers = [] # Clear existing to avoid double logs
+        l.addHandler(file_handler)
+        l.addHandler(stdout_handler)
+        l.propagate = False

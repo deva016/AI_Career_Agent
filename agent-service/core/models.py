@@ -41,34 +41,38 @@ class InterviewQuestion(BaseModel):
 def parse_llm_json(json_str: str, model: type[BaseModel], fallback: Optional[BaseModel] = None) -> BaseModel:
     """
     Safely parse LLM JSON response with validation.
-    
-    Args:
-        json_str: JSON string from LLM
-        model: Pydantic model class to validate against
-        fallback: Fallback instance if parsing fails
-        
-    Returns:
-        Validated model instance or fallback
+    Handles markdown code blocks and common formatting issues.
     """
     import json
     import logging
+    import re
     
     logger = logging.getLogger(__name__)
     
+    # 1. Clean the string
+    cleaned_str = json_str.strip()
+    
+    # 2. Extract JSON from markdown blocks if present
+    # Matches ```json {..} ``` or ``` {..} ```
+    markdown_match = re.search(r'```(?:json)?\s*(.*?)\s*```', cleaned_str, re.DOTALL)
+    if markdown_match:
+        cleaned_str = markdown_match.group(1).strip()
+    
     try:
         # Try parsing as JSON
-        data = json.loads(json_str)
+        data = json.loads(cleaned_str)
         
         # Validate with Pydantic
         return model.model_validate(data)
     except json.JSONDecodeError as e:
         logger.error(f"JSON decode error: {e}")
-        logger.error(f"Invalid JSON: {json_str[:200]}")
+        logger.error(f"Failed string (first 500 chars): {cleaned_str[:500]}")
         if fallback:
             return fallback
         return model()
     except Exception as e:
         logger.error(f"Validation error: {e}")
+        logger.error(f"Data was: {cleaned_str[:500]}")
         if fallback:
             return fallback
         return model()

@@ -15,6 +15,8 @@ import {
   SkillGapRequest,
   InterviewRequest,
   ApprovalRequest,
+  UserSettings,
+  UserSettingsUpdate,
 } from "@/lib/types/agent";
 
 const AGENT_API_URL = process.env.NEXT_PUBLIC_AGENT_API_URL || "http://localhost:8000";
@@ -145,6 +147,45 @@ export class AgentClient {
 
     const query = params.toString() ? `?${params.toString()}` : "";
     return this.request<MissionsListResponse>(`/missions${query}`);
+  }
+
+  // Job Status
+  async updateJobStatus(jobId: string, status: string): Promise<any> {
+    return this.request(`/jobs/${jobId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // User Settings
+  async getSettings(): Promise<UserSettings> {
+    return this.request<UserSettings>("/settings");
+  }
+
+  async updateSettings(payload: UserSettingsUpdate): Promise<any> {
+    return this.request("/settings", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // Application Status
+  async updateApplicationStatus(applicationId: string, status: string, notes?: string): Promise<any> {
+    return this.request(`/applications/${applicationId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, notes }),
+    });
+  }
+
+  async publishLinkedInPost(postId: string, content: string, scheduledFor?: Date): Promise<any> {
+    return this.request("/linkedin/publish", {
+      method: "POST",
+      body: JSON.stringify({
+        post_id: postId,
+        content,
+        scheduled_for: scheduledFor?.toISOString(),
+      }),
+    });
   }
 
   // Create EventSource for SSE streaming

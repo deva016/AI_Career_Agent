@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       ...(jobId && { job_id: jobId }),
     });
 
-    const response = await fetch(`${AGENT_API_URL}/api/resumes?${queryParams}`, {
+    const response = await fetch(`${AGENT_API_URL}/api/resumes/?${queryParams}`, {
       headers: {
         "X-User-Email": session.user.email,
       },
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: "Unknown error" }));
+      const error = await response.json().catch(() => ({ detail: "Upload failed" }));
       return NextResponse.json(
         { error: error.detail || "Failed to upload resume" },
         { status: response.status }

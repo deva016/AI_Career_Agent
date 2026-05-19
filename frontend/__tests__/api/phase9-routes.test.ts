@@ -332,6 +332,7 @@ describe('Artifacts API Routes', () => {
           'content-type': 'application/pdf',
           'content-disposition': 'attachment; filename="resume.pdf"',
         }),
+        json: async () => ({}),
       };
       (global.fetch as any).mockResolvedValue(mockResponse);
 

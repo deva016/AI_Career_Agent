@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Target, Search, MapPin, Briefcase, Zap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ interface LaunchMissionModalProps {
     target_locations: string[];
   }) => Promise<void>;
   isLaunching: boolean;
+  initialQuery?: string;
 }
 
 export function LaunchMissionModal({
@@ -23,10 +24,18 @@ export function LaunchMissionModal({
   onClose,
   onLaunch,
   isLaunching,
+  initialQuery,
 }: LaunchMissionModalProps) {
   const [query, setQuery] = useState("");
   const [roles, setRoles] = useState("");
   const [locations, setLocations] = useState("Remote");
+
+  useEffect(() => {
+    if (isOpen && initialQuery) {
+      setQuery(initialQuery);
+      setRoles(initialQuery); // Often the query is the role
+    }
+  }, [isOpen, initialQuery]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

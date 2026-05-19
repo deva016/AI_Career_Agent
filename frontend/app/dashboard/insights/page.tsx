@@ -11,31 +11,34 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-const skillData = [
-  { subject: 'Frontend', A: 120, fullMark: 150 },
-  { subject: 'Backend', A: 98, fullMark: 150 },
-  { subject: 'DevOps', A: 86, fullMark: 150 },
-  { subject: 'Design', A: 65, fullMark: 150 },
-  { subject: 'Management', A: 85, fullMark: 150 },
-  { subject: 'AI/ML', A: 110, fullMark: 150 },
-];
 
-const trendData = [
-  { month: 'Sep', demand: 400 },
-  { month: 'Oct', demand: 520 },
-  { month: 'Nov', demand: 480 },
-  { month: 'Dec', demand: 610 },
-  { month: 'Jan', demand: 750 },
-  { month: 'Feb', demand: 890 },
-];
+import { useInsights } from "@/lib/hooks/use-insights";
 
 export default function InsightsPage() {
+  const { data, loading, error } = useInsights();
   const { toast } = useToast();
+
+  if (loading) return <PageSkeleton />;
+
+  const skillData = data?.top_gaps.map(g => ({
+    subject: g.skill,
+    A: g.match,
+    fullMark: 100
+  })) || [
+    { subject: 'Frontend', A: 80, fullMark: 100 },
+    { subject: 'Backend', A: 70, fullMark: 100 },
+    { subject: 'DevOps', A: 60, fullMark: 100 },
+  ];
+
+  const trendData = data?.market_trend || [
+    { month: 'Jan', demand: 10 },
+    { month: 'Feb', demand: 20 },
+  ];
 
   const handleExplore = () => {
     toast({
       title: "Course Catalog Opening... 🚀",
-      description: "Redirecting to Cloud Native Architecture tracks.",
+      description: "Redirecting to specialized training tracks.",
     });
   };
 
@@ -53,9 +56,9 @@ export default function InsightsPage() {
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: "Market Match", value: "92%", icon: Award, color: "text-primary" },
-          { label: "Skill Velocity", value: "+18%", icon: TrendingUp, color: "text-emerald-400" },
-          { label: "Role Ranking", value: "Top 5%", icon: Users, color: "text-purple-400" },
+          { label: "Market Match", value: data?.stats?.market_match || "92%", icon: Award, color: "text-primary" },
+          { label: "Skill Velocity", value: data?.stats?.skill_velocity || "+18%", icon: TrendingUp, color: "text-emerald-400" },
+          { label: "Role Ranking", value: data?.stats?.role_ranking || "Top 5%", icon: Users, color: "text-purple-400" },
         ].map((item, i) => (
           <Card key={i} className="bg-white/5 border-white/10 overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -142,27 +145,29 @@ export default function InsightsPage() {
                <CardDescription>Missing proficiencies based on target job descriptions</CardDescription>
             </CardHeader>
             <CardContent>
-               <div className="space-y-4">
-                  {[
-                    { skill: "AWS Lambda", level: "High Demand", match: 10 },
-                    { skill: "Kubernetes", level: "Critical", match: 25 },
-                    { skill: "Python (FastAPI)", level: "Trending", match: 45 },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/5 group hover:border-primary/30 transition-colors">
-                       <div className="w-2 h-2 rounded-full bg-primary" />
-                       <div className="flex-1">
-                          <h4 className="font-bold text-white text-sm">{item.skill}</h4>
-                          <p className="text-[10px] text-muted-foreground uppercase">{item.level}</p>
-                       </div>
-                       <div className="text-right">
-                          <p className="text-xs font-bold text-white mb-1">{item.match}% Match</p>
-                          <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                             <div className="h-full bg-primary" style={{ width: `${item.match}%` }} />
-                          </div>
-                       </div>
+                <div className="space-y-4">
+                  {data?.top_gaps && data.top_gaps.length > 0 ? (
+                    data.top_gaps.map((item, i) => (
+                      <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/5 group hover:border-primary/30 transition-colors">
+                         <div className="w-2 h-2 rounded-full bg-primary" />
+                         <div className="flex-1">
+                            <h4 className="font-bold text-white text-sm">{item.skill}</h4>
+                            <p className="text-[10px] text-muted-foreground uppercase">{item.match > 30 ? 'High Demand' : 'Trending'}</p>
+                         </div>
+                         <div className="text-right">
+                            <p className="text-xs font-bold text-white mb-1">{item.match}% Match</p>
+                            <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                               <div className="h-full bg-primary" style={{ width: `${item.match}%` }} />
+                            </div>
+                         </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      No skill gaps identified yet. Run a Skill Gap Agent mission.
                     </div>
-                  ))}
-               </div>
+                  )}
+                </div>
             </CardContent>
          </Card>
          <Card className="bg-primary shadow-2xl shadow-primary/20 border-white/10 text-white overflow-hidden relative">
@@ -175,7 +180,7 @@ export default function InsightsPage() {
             </CardHeader>
             <CardContent className="relative z-10 space-y-4">
                <p className="text-sm font-medium leading-relaxed">
-                  Bridge your 12% market gap by taking our recommended "Cloud Native Architecture" track.
+                  Bridge your {Math.max(0, 100 - (data?.stats?.avg_match_score || 88))}% market gap by taking our recommended "Cloud Native Architecture" track.
                </p>
                <Button 
                 onClick={handleExplore}

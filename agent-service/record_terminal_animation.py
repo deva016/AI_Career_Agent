@@ -1,0 +1,222 @@
+import asyncio
+from playwright.async_api import async_playwright
+import os
+import time
+
+html_content = """
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-color: #0d1117;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+        }
+        .terminal {
+            width: 850px;
+            /* height: 500px; */ /* Fixed height so lines don't push the window out */
+            background-color: #000000;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background-color: #1a1a1a;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        .buttons {
+            display: flex;
+            gap: 8px;
+            margin-left: 10px;
+        }
+        .button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .close { background-color: #ff5f56; }
+        .minimize { background-color: #ffbd2e; }
+        .maximize { background-color: #27c93f; }
+        .title {
+            color: #a1a1aa;
+            font-size: 13px;
+            text-align: center;
+            flex-grow: 1;
+            margin-right: 56px;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }
+        .content {
+            padding: 24px;
+            padding-bottom: 400px; /* Spacer so animation has room to scroll up */
+            color: #e4e4e7;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            overflow: hidden;
+        }
+        .time { color: #71717a; }
+        .info { color: #3b82f6; font-weight: bold; }
+        .warn { color: #f59e0b; font-weight: bold; }
+        .system { color: #ec4899; font-weight: bold; }
+        .agent-discovery { color: #a855f7; font-weight: bold; }
+        .agent-semantic { color: #10b981; font-weight: bold; }
+        .agent-tailoring { color: #f97316; font-weight: bold; }
+        .agent-linkedin { color: #06b6d4; font-weight: bold; }
+        
+        .line { 
+            margin-bottom: 6px; 
+            opacity: 0; /* Start hidden for animation */
+            transform: translateY(10px);
+        }
+        .bold { font-weight: bold; }
+        .highlight { color: #eab308; }
+        .success { color: #22c55e;}
+        .red { color: #ef4444; font-weight: bold;}
+        
+        /* Cursor animation */
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .cursor { display: inline-block; width: 8px; height: 16px; background-color: #e4e4e7; vertical-align: middle; animation: blink 1s step-end infinite; }
+        
+        /* Line reveal animation class */
+        .reveal {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="header">
+            <div class="buttons">
+                <div class="button close"></div>
+                <div class="button minimize"></div>
+                <div class="button maximize"></div>
+            </div>
+            <div class="title">bash - langgraph-swarm - python orchestrator.py</div>
+        </div>
+        <div class="content" id="log-container">
+            <!-- Lines will be injected here via JS -->
+            <div class="line" id="cursor-line"><span class="cursor"></span></div>
+        </div>
+    </div>
+
+    <script>
+        const logs = [
+            '<span class="time">[10:45:01]</span> <span class="system">[System]</span> Initializing LangGraph Swarm Orchestration...',
+            '<span class="time">[10:45:01]</span> <span class="system">[System]</span> Loading 5 specialized sub-agents...',
+            '<span class="time">[10:45:02]</span> <span class="info">[INFO]</span> <span class="agent-discovery">[Discovery Agent]</span> 📡 Ingesting JD: <span class="highlight">\\'Senior Data Analyst\\'</span> at Acme Corp',
+            '<span class="time">[10:45:03]</span> <span class="info">[INFO]</span> <span class="agent-discovery">[Discovery Agent]</span> <span class="success">✅ Extraction complete.</span> Parsing raw DOM tree...',
+            '<span class="time">[10:45:03]</span> <span class="info">[INFO]</span> <span class="agent-discovery">[Discovery Agent]</span> Emitting job context to Swarm event bus.',
+            '<span class="time">[10:45:03]</span> <span class="warn">[WARN]</span> <span class="agent-semantic">[Semantic Analyst]</span> 🧠 Missed exact match for \\'Tableau\\'. Querying pgvector for alternatives...',
+            '<span class="time">[10:45:04]</span> <span class="info">[INFO]</span> <span class="agent-semantic">[Semantic Analyst]</span> 🎯 Semantic Match found: \\'Power BI\\' (Cosine Similarity: 0.89).',
+            '<span class="time">[10:45:04]</span> <span class="info">[INFO]</span> <span class="agent-semantic">[Semantic Analyst]</span> Injecting filtered vector context into workflow.',
+            '<span class="time">[10:45:04]</span> <span class="info">[INFO]</span> <span class="agent-tailoring">[Tailoring Agent]</span> ✍️ Generating ATS-optimized Resume sections via RAG...',
+            '<span class="time">[10:45:06]</span> <span class="info">[INFO]</span> <span class="agent-tailoring">[Tailoring Agent]</span> <span class="success">✅ Resume Generation Complete.</span>',
+            '<span class="time">[10:45:07]</span> <span class="info">[INFO]</span> <span class="agent-tailoring">[Tailoring Agent]</span> ✍️ Compiling Custom Cover Letter payload...',
+            '<span class="time">[10:45:09]</span> <span class="info">[INFO]</span> <span class="agent-linkedin">[LinkedIn Agent]</span> 📝 Drafting social post about \\'Data Analysis Architecture\\'...',
+            '<br>',
+            '<span class="time">[10:45:10]</span> <span class="system">[System]</span> <span class="red">🛑 HITL INTERRUPT: Swarm execution paused.</span>',
+            '<span class="time">[10:45:10]</span> <span class="system">[System]</span> <span class="red">🛑 Awaiting Human Approval in Next.js Command Center...</span>',
+            '<span class="time">[10:45:10]</span> <span class="time">Waiting for user input...</span> <span class="cursor"></span>'
+        ];
+
+        const container = document.getElementById('log-container');
+        let i = 0;
+
+        function animateLogs() {
+            if (i < logs.length) {
+                // Remove the old cursor line
+                const oldCursor = document.getElementById('cursor-line');
+                if (oldCursor) oldCursor.remove();
+
+                const newLine = document.createElement('div');
+                newLine.className = 'line reveal';
+                newLine.innerHTML = logs[i];
+                
+                // If it's the last line (the waiting line), don't append a new cursor block 
+                // because the last line already contains the cursor
+                container.appendChild(newLine);
+
+                // Add the dummy cursor block back to the bottom if it's NOT the last line
+                if (i < logs.length - 1) {
+                    const cursorDiv = document.createElement('div');
+                    cursorDiv.className = 'line';
+                    cursorDiv.id = 'cursor-line';
+                    cursorDiv.innerHTML = '<span class="cursor"></span>';
+                    container.appendChild(cursorDiv);
+                }
+
+                i++;
+                
+                // Randomize delay to look like real execution (between 100ms and 800ms)
+                let delay = Math.floor(Math.random() * 700) + 100;
+                // Add longer pauses before "generation" steps
+                if (logs[i] && logs[i].includes('Generating')) delay = 1500;
+                if (logs[i] && logs[i].includes('HITL')) delay = 1200;
+
+                setTimeout(animateLogs, delay);
+            } else {
+                // Animation finished, signal Playwright
+                window.animationFinished = true;
+            }
+        }
+
+        // Start animation after 1 second delay
+        setTimeout(animateLogs, 1000);
+    </script>
+</body>
+</html>
+"""
+
+async def main():
+    html_path = f"file:///{os.path.abspath('terminal_anim.html').replace(os.sep, '/')}"
+    
+    with open("terminal_anim.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+        
+    print(f"To record the video, we will use Playwright's screen recording feature.")
+    
+    # We will record a video using playwright
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            args=["--force-device-scale-factor=2"]
+        )
+        context = await browser.new_context(
+            viewport={'width': 1200, 'height': 800},
+            record_video_dir="videos/",
+            record_video_size={'width': 1200, 'height': 800}
+        )
+        page = await context.new_page()
+        
+        print("Loading animation page and recording video...")
+        await page.goto(html_path)
+        
+        # Wait until the javascript window.animationFinished flag is true
+        try:
+            await page.wait_for_function("window.animationFinished === true", timeout=30000)
+            print("Animation sequence completed.")
+        except Exception as e:
+            print("Timed out waiting for animation to finish.")
+            
+        # Let it sit on the finished screen for 3 seconds
+        await page.wait_for_timeout(3000)
+            
+        await context.close()
+        await browser.close()
+        
+    print("Video generation complete. Check the 'videos/' directory.")
+
+if __name__ == "__main__":
+    asyncio.run(main())

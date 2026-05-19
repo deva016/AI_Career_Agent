@@ -59,6 +59,7 @@ export default function SignInPage() {
             <Linkedin className="w-5 h-5" />
             Continue with LinkedIn
           </Button>
+          
         </div>
 
         <p className="mt-6 text-center text-sm text-gray-400">

@@ -16,27 +16,39 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get("type");
-    const missionId = searchParams.get("mission_id");
-    const limit = searchParams.get("limit") || "50";
-
-    const queryParams = new URLSearchParams({
-      limit,
-      ...(type && { type }),
-      ...(missionId && { mission_id: missionId }),
+    
+    // Forward relevant query params
+    const backendParams = new URLSearchParams();
+    ['job_id', 'mission_id', 'type'].forEach(param => {
+      const val = searchParams.get(param);
+      if (val) backendParams.append(param, val);
     });
+    
+    const queryString = backendParams.toString();
+    const url = queryString 
+      ? `${AGENT_API_URL}/api/artifacts?${queryString}`
+      : `${AGENT_API_URL}/api/artifacts`;
 
-    const response = await fetch(`${AGENT_API_URL}/api/artifacts?${queryParams}`, {
+    const response = await fetch(url, {
       headers: {
         "X-User-Email": session.user.email,
       },
+      cache: "no-store",
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: "Unknown error" }));
+      let errorDetail = "Failed to fetch artifacts";
+      try {
+        if (response && typeof response.json === "function") {
+          const error = await response.json();
+          errorDetail = error.detail || errorDetail;
+        }
+      } catch (_) {
+        // ignore
+      }
       return NextResponse.json(
-        { error: error.detail || "Failed to fetch artifacts" },
-        { status: response.status }
+        { error: errorDetail },
+        { status: response.status || 500 }
       );
     }
 

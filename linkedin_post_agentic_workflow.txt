@@ -1,0 +1,22 @@
+The industry is drowning in simple "AI wrappers." But real-world automation doesn’t happen in a single prompt it requires a coordinated team.
+
+While building the AI Career Agent, I quickly realized that a single monolithic LLM call wouldn't cut it. To fully automate the job search lifecycle, I needed specialized domain experts. 
+
+So, I threw out the single-prompt approach and engineered a Multi-Agent Swarm using LangGraph and Python. 
+
+Instead of one AI doing everything poorly, the system is a pipeline of specialized micro-agents:
+
+1. The Discovery Agent: Scours the web, finding and ingesting messy Job Description data.
+2. The Semantic Analyst (pgvector): Converts job requirements into embeddings, executing vector similarity searches against my past experiences to find the perfect technical matches.
+3. The Tailoring Agent: Takes the vector search results and dynamically rewrites my resume and cover letter to specifically target the parsed job description.
+4. The Content Creator: Independently manages my LinkedIn presence based on project milestones.
+
+Building this Multi-Agent orchestration fundamentally changed how I handle state. The hardest engineering challenge wasn't the LLM itself it was passing context reliably between asynchronous agents, handling rate limits, and introducing a Human-In-The-Loop (HITL) interrupt so I maintain ultimate control over the final output.
+
+We are moving past GenAI. We are entering the era of Agentic Workflows. 
+
+If you are building Agentic systems right now are you preferring LangGraph, AutoGen, or building custom orchestration from scratch? Let's debate. 👇
+
+P.S. For those asking about the backend architecture, I've mapped out the full LangGraph layout in the comments below! 👇
+
+#SoftwareEngineering #AI #LangGraph #SystemArchitecture #MachineLearning #AgenticAI #PostgreSQL #Python

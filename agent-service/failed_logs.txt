@@ -1,0 +1,188 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.0.2, pluggy-1.6.0
+rootdir: D:\project\AI_Career_Agent\agent-service
+configfile: pytest.ini
+plugins: anyio-4.12.1, langsmith-0.6.8, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 21 items / 7 deselected / 14 selected
+run-last-failure: rerun previous 14 failures (skipped 1 file)
+
+tests\test_artifacts.py FFFFFFF                                          [ 50%]
+tests\test_integration.py EEEEEFE                                        [100%]
+
+=================================== ERRORS ====================================
+__ ERROR at setup of TestEndToEndWorkflows.test_complete_job_search_workflow __
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:728: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+E   pytest.PytestRemovedIn9Warning: 'test_complete_job_search_workflow' requested an async fixture 'setup_db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+___ ERROR at setup of TestEndToEndWorkflows.test_resume_tailoring_workflow ____
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:728: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+E   pytest.PytestRemovedIn9Warning: 'test_resume_tailoring_workflow' requested an async fixture 'setup_db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+___ ERROR at setup of TestEndToEndWorkflows.test_mission_state_persistence ____
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:728: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+E   pytest.PytestRemovedIn9Warning: 'test_mission_state_persistence' requested an async fixture 'setup_db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+_ ERROR at setup of TestEndToEndWorkflows.test_concurrent_missions_isolation __
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:728: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+E   pytest.PytestRemovedIn9Warning: 'test_concurrent_missions_isolation' requested an async fixture 'setup_db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+_________ ERROR at setup of TestEndToEndWorkflows.test_error_recovery _________
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:458: in setup
+    return super().setup()
+           ^^^^^^^^^^^^^^^
+..\.venv\Lib\site-packages\pytest_asyncio\plugin.py:728: in pytest_fixture_setup
+    return (yield)
+            ^^^^^
+E   pytest.PytestRemovedIn9Warning: 'test_error_recovery' requested an async fixture 'setup_db', with no plugin or hook that handled it. This is usually an error, as pytest does not natively support it. This will turn into an error in pytest 9.
+E   See: https://docs.pytest.org/en/stable/deprecations.html#sync-test-depending-on-async-fixture
+_____ ERROR at setup of TestDataValidation.test_sql_injection_prevention ______
+file D:\project\AI_Career_Agent\agent-service\tests\test_integration.py, line 147
+      @pytest.mark.asyncio
+      async def test_sql_injection_prevention(self, setup_db):
+          """Test SQL injection prevention"""
+          malicious_query = "'; DROP TABLE missions; --"
+
+          result = await run_job_finder(
+              user_id="test-user",
+              query=malicious_query,
+              target_roles=[],
+              target_locations=[]
+          )
+
+          # Should not execute SQL
+          # Verify missions table still exists
+          missions = await DatabaseService.list_missions(user_id="test-user")
+          assert missions is not None
+E       fixture 'setup_db' not found
+>       available fixtures: _class_scoped_runner, _function_scoped_runner, _module_scoped_runner, _package_scoped_runner, _session_scoped_runner, anyio_backend, anyio_backend_name, anyio_backend_options, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, cov, doctest_namespace, event_loop_policy, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, monkeypatch, no_cover, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+D:\project\AI_Career_Agent\agent-service\tests\test_integration.py:147
+================================== FAILURES ===================================
+___________ TestArtifactSerialization.test_to_dict_includes_content ___________
+tests\test_artifacts.py:19: in test_to_dict_includes_content
+    art = Artifact(
+E   TypeError: Artifact.__init__() missing 1 required positional argument: 'id'
+_________ TestArtifactSerialization.test_to_dict_handles_none_content _________
+tests\test_artifacts.py:32: in test_to_dict_handles_none_content
+    art = Artifact(type="report", name="Empty Report", content=None)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: Artifact.__init__() missing 1 required positional argument: 'id'
+______ TestArtifactSerialization.test_to_dict_handles_non_string_content ______
+tests\test_artifacts.py:39: in test_to_dict_handles_non_string_content
+    art = Artifact(
+E   TypeError: Artifact.__init__() missing 1 required positional argument: 'id'
+__________ TestArtifactSerialization.test_to_dict_all_fields_present __________
+tests\test_artifacts.py:50: in test_to_dict_all_fields_present
+    art = Artifact(type="cover_letter", name="CL", content="Dear Hiring")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: Artifact.__init__() missing 1 required positional argument: 'id'
+__________ TestArtifactSerialization.test_to_dict_created_at_is_iso ___________
+tests\test_artifacts.py:57: in test_to_dict_created_at_is_iso
+    art = Artifact(type="resume", name="R", content="x")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: Artifact.__init__() missing 1 required positional argument: 'id'
+_______ TestArtifactPersistenceBridge.test_artifacts_persisted_to_table _______
+tests\test_artifacts.py:72: in test_artifacts_persisted_to_table
+    mock_art = Artifact(
+E   TypeError: Artifact.__init__() missing 1 required positional argument: 'id'
+_ TestArtifactPersistenceBridge.test_artifact_persistence_failure_doesnt_crash_mission _
+tests\test_artifacts.py:110: in test_artifact_persistence_failure_doesnt_crash_mission
+    mock_art = Artifact(type="resume", name="R", content="X")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: Artifact.__init__() missing 1 required positional argument: 'id'
+___________________ TestDataValidation.test_xss_prevention ____________________
+tests\test_integration.py:145: in test_xss_prevention
+    assert "<script>" not in str(result) or "failed" in str(result.get('status', '')) or "running" in str(result.get('status', ''))
+E   assert ('<script>' not in "{'mission_i...emoved': 0}}"
+E     
+E     '<script>' is contained here:
+E       'query': "<script>alert('XSS')</script>", 'target_roles': ["<script>alert('XSS')</script>"], 'target_locations': ["<script>alert('XSS')</script>"]}, 'output_data': {'jobs_found': 0, 'job_ids': []}, 'artifacts': [Artifact(id='887abefd-b970-4322-a2c5-d08fc4fddbfc', type='json', name='job_search_summary', content={'jobs_found': 0, 'jobs_stored': 0, 'criteria': {'keywords': ["<script>alert('XSS')</script>"], 'locations': ["<script>alert('XSS')</script>"], 'experience_level': 'any', 'job_type': 'full-time', 'remote_ok': True}}, created_at=datetime.datetime(2026,...
+E     
+E     ...Full output truncated (2 lines hidden), use '-vv' to show or 'failed' in 'MissionStatus.COMPLETED' or 'running' in 'MissionStatus.COMPLETED')
+E    +  where 'MissionStatus.COMPLETED' = str(<MissionStatus.COMPLETED: 'completed'>)
+E    +    where <MissionStatus.COMPLETED: 'completed'> = <built-in method get of dict object at 0x0000017E50BF8380>('status', '')
+E    +      where <built-in method get of dict object at 0x0000017E50BF8380> = {'agent_type': <AgentType.JOB_FINDER: 'job_finder'>, 'approval_reason': None, 'artifacts': [Artifact(id='887abefd-b970...}}, created_at=datetime.datetime(2026, 2, 20, 16, 49, 46, 445915))], 'completed_at': '2026-02-20T16:49:46.445915', ...}.get
+E    +  and   'MissionStatus.COMPLETED' = str(<MissionStatus.COMPLETED: 'completed'>)
+E    +    where <MissionStatus.COMPLETED: 'completed'> = <built-in method get of dict object at 0x0000017E50BF8380>('status', '')
+E    +      where <built-in method get of dict object at 0x0000017E50BF8380> = {'agent_type': <AgentType.JOB_FINDER: 'job_finder'>, 'approval_reason': None, 'artifacts': [Artifact(id='887abefd-b970...}}, created_at=datetime.datetime(2026, 2, 20, 16, 49, 46, 445915))], 'completed_at': '2026-02-20T16:49:46.445915', ...}.get
+============================== warnings summary ===============================
+core\config.py:11
+  D:\project\AI_Career_Agent\agent-service\core\config.py:11: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.11.9-final-0 _______________
+
+Name                          Stmts   Miss  Cover   Missing
+-----------------------------------------------------------
+agents\__init__.py                6      0   100%
+agents\application_agent.py     108     90    17%   30-49, 68-72, 90-105, 124-164, 183-188, 208-212, 232-234, 242-267, 282-337
+agents\interview_agent.py        93     78    16%   60-90, 110-128, 145-180, 200-211, 226-279
+agents\job_finder.py            136     34    75%   40, 87, 106-107, 137-139, 174-220, 358-364
+agents\linkedin_agent.py         84     69    18%   45-62, 81-100, 118, 136-161, 181-183, 189-210, 224-278
+agents\resume_agent.py          115     96    17%   87-120, 141-160, 180-233, 261-263, 281-301, 325-327, 335-361, 379-439
+agents\skill_gap_agent.py        96     79    18%   53-66, 84-109, 126-154, 171-198, 218-231, 244-293
+app\__init__.py                   0      0   100%
+app\main.py                      52     52     0%   6-112
+app\routers\__init__.py           0      0   100%
+app\routers\agent.py            226    141    38%   113-140, 157-219, 239-265, 282-306, 323-342, 357-378, 393-413, 428-450, 464-470, 481-537, 548-558, 567-600
+app\routers\applications.py      35     35     0%   1-73
+app\routers\artifacts.py         35     35     0%   5-67
+app\routers\dashboard.py          8      8     0%   7-22
+app\routers\insights.py           9      9     0%   5-17
+app\routers\interview.py         46     46     0%   1-100
+app\routers\jobs.py              50     50     0%   7-149
+app\routers\linkedin.py          50     50     0%   1-128
+app\routers\resumes.py           27     27     0%   1-60
+app\routers\settings.py          31     31     0%   5-69
+core\__init__.py                  0      0   100%
+core\auth.py                     16      9    44%   24-32, 49-50
+core\config.py                   27      2    93%   65, 70
+core\database.py                277    168    39%   26-32, 46-49, 55-57, 72-73, 81-86, 105-116, 121-126, 142-143, 154-159, 169-180, 195-205, 216-232, 242-247, 261-270, 281-286, 296-308, 319-330, 337-342, 353-367, 380-388, 393-406, 455, 474-503, 508-526, 543-552, 557-581, 598-617, 622-627, 632-641, 646-660
+core\llm.py                     128    108    16%   25-39, 43, 55-144, 155-219, 232-237, 270-271
+core\logging_config.py           20     20     0%   5-48
+core\models.py                   40     17    58%   53-74
+graphs\__init__.py                0      0   100%
+graphs\state.py                  65      3    95%   45, 150-151
+-----------------------------------------------------------
+TOTAL                          1780   1257    29%
+Coverage HTML written to dir htmlcov
+=========================== short test summary info ===========================
+FAILED tests/test_artifacts.py::TestArtifactSerialization::test_to_dict_includes_content
+FAILED tests/test_artifacts.py::TestArtifactSerialization::test_to_dict_handles_none_content
+FAILED tests/test_artifacts.py::TestArtifactSerialization::test_to_dict_handles_non_string_content
+FAILED tests/test_artifacts.py::TestArtifactSerialization::test_to_dict_all_fields_present
+FAILED tests/test_artifacts.py::TestArtifactSerialization::test_to_dict_created_at_is_iso
+FAILED tests/test_artifacts.py::TestArtifactPersistenceBridge::test_artifacts_persisted_to_table
+FAILED tests/test_artifacts.py::TestArtifactPersistenceBridge::test_artifact_persistence_failure_doesnt_crash_mission
+FAILED tests/test_integration.py::TestDataValidation::test_xss_prevention - a...
+ERROR tests/test_integration.py::TestEndToEndWorkflows::test_complete_job_search_workflow
+ERROR tests/test_integration.py::TestEndToEndWorkflows::test_resume_tailoring_workflow
+ERROR tests/test_integration.py::TestEndToEndWorkflows::test_mission_state_persistence
+ERROR tests/test_integration.py::TestEndToEndWorkflows::test_concurrent_missions_isolation
+ERROR tests/test_integration.py::TestEndToEndWorkflows::test_error_recovery
+ERROR tests/test_integration.py::TestDataValidation::test_sql_injection_prevention
+============ 8 failed, 7 deselected, 1 warning, 6 errors in 46.27s ============

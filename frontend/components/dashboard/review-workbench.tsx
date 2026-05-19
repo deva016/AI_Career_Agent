@@ -36,6 +36,7 @@ interface ReviewWorkbenchProps {
   oldContent: string;
   newContent: string;
   reasoning?: ReasoningNode[];
+  similarityScore?: number | null; // 0-100 scale, null = not available
   onApprove: (id: string, feedback?: string, editedContent?: string) => void;
   onRegenerate: (id: string, feedback: string) => void;
   onManualEdit: (id: string, newContent: string) => void;
@@ -49,6 +50,7 @@ export function ReviewWorkbench({
   oldContent,
   newContent,
   reasoning = [],
+  similarityScore = null,
   onApprove,
   onRegenerate,
   onManualEdit,
@@ -188,7 +190,15 @@ export function ReviewWorkbench({
                               <Zap className="w-4 h-4 text-primary" />
                               <span className="text-xs font-bold text-primary uppercase tracking-widest">AI Tailored Draft (Output)</span>
                            </div>
-                           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-none text-[10px]">98% SEMANTIC MATCH</Badge>
+                           <Badge variant="outline" className={`border-none text-[10px] ${
+                             similarityScore != null && similarityScore >= 80
+                               ? 'bg-emerald-500/10 text-emerald-400'
+                               : similarityScore != null
+                                 ? 'bg-amber-500/10 text-amber-400'
+                                 : 'bg-blue-500/10 text-blue-400'
+                           }`}>
+                             {similarityScore != null ? `${Math.round(similarityScore)}% SEMANTIC MATCH` : 'REVIEW REQUIRED'}
+                           </Badge>
                         </div>
                         <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
                            <DiffViewer oldText={oldContent} newText={newContent} />
@@ -274,9 +284,13 @@ export function ReviewWorkbench({
                        <Zap className="w-4 h-4 text-primary" />
                        <span className="text-[10px] font-bold text-white uppercase tracking-widest">Vector Insight</span>
                     </div>
-                    <p className="text-[11px] text-gray-400 leading-tight">
-                       This version has a <span className="text-emerald-400 font-bold">98.2% similarity score</span> with the target Job Description's "Core Skills" cluster.
-                    </p>
+                     <p className="text-[11px] text-gray-400 leading-tight">
+                        {similarityScore != null ? (
+                          <>This version has a <span className={`font-bold ${similarityScore >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>{similarityScore.toFixed(1)}% similarity score</span> with the target Job Description&apos;s &quot;Core Skills&quot; cluster.</>
+                        ) : (
+                          <>Similarity score data is not available for this mission type. Approve based on your manual review.</>
+                        )}
+                     </p>
                  </div>
               </div>
 

@@ -42,10 +42,18 @@ class Artifact:
     created_at: datetime = field(default_factory=datetime.now)
     
     def to_dict(self) -> Dict:
+        import json
+        content_val = self.content
+        if content_val is not None and not isinstance(content_val, str):
+            try:
+                content_val = json.dumps(content_val)
+            except:
+                content_val = str(content_val)
         return {
             "id": self.id,
             "type": self.type,
             "name": self.name,
+            "content": content_val,
             "created_at": self.created_at.isoformat(),
         }
 
@@ -162,3 +170,16 @@ def update_status(state: AgentState, status: MissionStatus, node: str, progress:
             data={"node": node, "progress": progress}
         )]
     }
+
+
+def get_retry_callback(mission_id: str):
+    """Create a callback for LLM retry logging."""
+    async def log_retry(msg: str):
+        from core.database import db
+        await db.add_mission_event(
+            mission_id, 
+            type="log", 
+            message=msg
+        )
+    return log_retry
+

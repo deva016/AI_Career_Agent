@@ -15,7 +15,8 @@ import json
 
 from graphs.state import (
     AgentState, MissionStatus, AgentType,
-    create_initial_state, update_status, MissionEvent, Artifact
+    create_initial_state, update_status, MissionEvent, Artifact,
+    get_retry_callback
 )
 from core.llm import LLMClient
 from core.database import db
@@ -76,11 +77,13 @@ async def research_company(state: AgentState) -> Dict:
 
     llm = LLMClient()
     
-    # Mock research by asking LLM to simulate it based on it's training data
-    # Real implementation would use search tools
-    research_json = await llm.simple_prompt(
-        COMPANY_RESEARCH_PROMPT.format(company=company, role=role),
-        system="You are an expert corporate researcher. Respond only in valid JSON."
+    # Mock research by asking LLM to simulate it based on its training data
+    research_json = await llm.chat(
+        messages=[
+            {"role": "system", "content": "You are an expert corporate researcher. Respond only in valid JSON."},
+            {"role": "user", "content": COMPANY_RESEARCH_PROMPT.format(company=company, role=role)}
+        ],
+        on_retry=get_retry_callback(state["mission_id"])
     )
     
     # Validate with Pydantic
@@ -110,14 +113,17 @@ async def generate_questions(state: AgentState) -> Dict:
     context = state["context"]
     llm = LLMClient()
     
-    questions_json = await llm.simple_prompt(
-        GENERATE_QUESTIONS_PROMPT.format(
-            role=context["role"],
-            company=context["company"],
-            research=json.dumps(context["research"]),
-            description=context.get("description", "")[:1000]
-        ),
-        system="You are an expert technical interviewer. Respond only in valid JSON."
+    questions_json = await llm.chat(
+        messages=[
+            {"role": "system", "content": "You are an expert technical interviewer. Respond only in valid JSON."},
+            {"role": "user", "content": GENERATE_QUESTIONS_PROMPT.format(
+                role=context["role"],
+                company=context["company"],
+                research=json.dumps(context["research"]),
+                description=context.get("description", "")[:1000]
+            )}
+        ],
+        on_retry=get_retry_callback(state["mission_id"])
     )
     
     try:

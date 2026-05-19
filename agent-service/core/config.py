@@ -5,8 +5,7 @@ Uses Pydantic Settings for environment variable validation.
 
 from pydantic_settings import BaseSettings
 from pydantic import Field
-from functools import lru_cache
-from typing import Literal
+from typing import Literal, Optional
 
 
 class Settings(BaseSettings):
@@ -36,6 +35,15 @@ class Settings(BaseSettings):
         alias="PAID_MODEL"
     )
     
+    # Backup LLM Providers
+    gemini_api_key: Optional[str] = Field(None, alias="GEMINI_API_KEY")
+    openai_api_key: Optional[str] = Field(None, alias="OPENAI_API_KEY")
+    
+    # LLM Configuration
+    gemini_model: str = Field(default="gemini-2.0-flash", alias="GEMINI_MODEL")
+    openai_model: str = Field(default="gpt-4o", alias="OPENAI_MODEL")
+    temperature: float = Field(default=0.7, alias="TEMPERATURE")
+    
     # Embedding model (using OpenAI-compatible via OpenRouter)
     embedding_model: str = Field(
         default="openai/text-embedding-3-small",
@@ -57,6 +65,9 @@ class Settings(BaseSettings):
     # Server
     port: int = Field(default=8000, alias="PORT")
     
+    # Debug mode — set to False in production to disable auth fallback
+    debug_mode: bool = Field(default=True, alias="DEBUG_MODE")
+    
     @property
     def origins_list(self) -> list[str]:
         """Parse allowed origins into a list."""
@@ -73,7 +84,6 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 
-@lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance."""
+    """Get settings instance (reads from .env on every call)."""
     return Settings()

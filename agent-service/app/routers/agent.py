@@ -46,6 +46,7 @@ class JobFinderRequest(BaseModel):
 
 class ResumeTailorRequest(BaseModel):
     """Request to tailor resume for a job."""
+    resume_id: Optional[str] = Field(None, description="Source resume ID")
     job_id: Optional[str] = Field(None, description="Job ID from database")
     job_description: Optional[str] = Field(None, description="Job description text")
     job_title: Optional[str] = None
@@ -98,6 +99,12 @@ class ApprovalRequest(BaseModel):
     approved: bool
     feedback: Optional[str] = None
     edited_content: Optional[str] = Field(None, description="Manually edited content to override AI draft")
+
+
+class MissionsListResponse(BaseModel):
+    """Paginated list of missions."""
+    missions: List[MissionResponse]
+    total: int
 
 
 # ========== Helper Functions ==========
@@ -190,6 +197,22 @@ async def run_mission_background(mission_id: str, mission_type: str, user_id: st
             error=state.get("error"),  # Pass error from state if present
             completed_at=datetime.now() if final_status in ["completed", "failed"] else None
         )
+        
+        # Persist artifacts to standalone artifacts table for the Documents gallery
+        for art in state.get("artifacts", []):
+            try:
+                art_dict = art.to_dict() if hasattr(art, "to_dict") else art
+                await db.create_artifact(
+                    user_id=user_id,
+                    type=art_dict.get("type", "document"),
+                    file_url=f"mission://{mission_id}/{art_dict.get('id', 'unknown')}",
+                    name=art_dict.get("name", "Untitled"),
+                    content=art_dict.get("content"),
+                    mission_id=mission_id,
+                )
+            except Exception as art_err:
+                logger.warning(f"Failed to persist artifact to table: {art_err}")
+        
         logger.info(f"Mission {mission_id} complete: {final_status}")
         
     except Exception as e:
@@ -274,6 +297,7 @@ async def start_resume_mission(
         mission_id=mission_id,
         mission_type="resume",
         user_id=user_id,
+        resume_id=request.resume_id,
         job_id=request.job_id,
         job_description=request.job_description,
         job_title=request.job_title,
@@ -452,6 +476,7 @@ async def get_mission(
 async def approve_mission(
     mission_id: str, 
     request: ApprovalRequest,
+    background_tasks: BackgroundTasks,
     user_id: str = Depends(get_current_user),
 ):
     """Approve or reject a mission waiting for HITL review."""
@@ -490,6 +515,22 @@ async def approve_mission(
         updates["status"] = MissionStatus.COMPLETED.value
         updates["progress"] = 100
         updates["completed_at"] = datetime.now()
+        
+        # Sync to artifacts/resumes table if applicable
+        if mission.get("agent_type") == "resume":
+            input_data = mission.get("input_data") or {}
+            resume_id = input_data.get("resume_id")
+            
+            # Use edited content if available, otherwise the AI content
+            final_content = request.edited_content
+            if not final_content:
+                artifacts = mission.get("artifacts") or []
+                if artifacts:
+                    final_content = artifacts[0].get("content")
+            
+            if resume_id and final_content:
+                logger.info(f"Syncing tailored content to resume {resume_id}")
+                await db.update_resume_tailored_content(resume_id, final_content)
     else:
         # User requested regeneration with feedback
         updates["status"] = MissionStatus.RUNNING.value
@@ -514,7 +555,7 @@ async def approve_mission(
     return state_to_response(updated_mission)
 
 
-@router.get("/missions")
+@router.get("/missions", response_model=MissionsListResponse)
 async def list_missions(
     status: Optional[str] = None,
     limit: int = 20,
@@ -530,9 +571,11 @@ async def list_missions(
         summary=True
     )
     
+    total = await db.get_table_count("missions", user_id, status)
+    
     return {
         "missions": [state_to_response(m) for m in missions],
-        "total": len(missions),  # Approximation for now
+        "total": total,
     }
 
 

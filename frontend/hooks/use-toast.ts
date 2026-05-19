@@ -1,37 +1,35 @@
 /**
- * Simple Toast Hook
- * 
- * Basic toast notification hook for user feedback.
+ * Toast Hook — powered by sonner
+ *
+ * Wraps sonner's toast API with the same interface used across the dashboard
+ * so existing code (useToast / toast({ title, description, variant })) keeps
+ * working without any changes.
  */
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { toast as sonnerToast } from "sonner";
 
-interface Toast {
-  id: string;
+interface ToastOptions {
   title: string;
   description?: string;
   variant?: "default" | "destructive";
 }
 
 export function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toast = ({ title, description, variant = "default" }: ToastOptions) => {
+    if (variant === "destructive") {
+      sonnerToast.error(title, {
+        description,
+        duration: 4000,
+      });
+    } else {
+      sonnerToast.success(title, {
+        description,
+        duration: 3000,
+      });
+    }
+  };
 
-  const toast = useCallback(({ title, description, variant = "default" }: Omit<Toast, "id">) => {
-    const id = Math.random().toString(36).substring(7);
-    const newToast = { id, title, description, variant };
-    
-    setToasts((prev) => [...prev, newToast]);
-    
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
-    
-    // Log to console for now
-    console.log(`[Toast ${variant}]`, title, description);
-  }, []);
-
-  return { toast, toasts };
+  return { toast };
 }

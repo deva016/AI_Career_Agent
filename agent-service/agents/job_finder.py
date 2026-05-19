@@ -67,16 +67,40 @@ async def parse_search_criteria(state: AgentState) -> Dict:
 async def scrape_jobs(state: AgentState) -> Dict:
     """
     Scrape jobs from configured sources using Playwright scrapers.
+    Runs Playwright in a dedicated thread to avoid Windows asyncio subprocess issue.
     """
     criteria = state["context"].get("parsed_criteria", {})
+    
+    def run_playwright_sync(criteria):
+        """Run playwright in a brand new event loop in a thread (Windows fix)."""
+        import asyncio
+        import sys
+        
+        async def _scrape_async():
+            async with LinkedInScraper(headless=True) as scraper:
+                return await scraper.scrape(criteria)
+        
+        # On Windows, use ProactorEventLoop which supports subprocess creation
+        if sys.platform == "win32":
+            loop = asyncio.ProactorEventLoop()
+        else:
+            loop = asyncio.new_event_loop()
+        
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(_scrape_async())
+        finally:
+            loop.close()
     
     # Initialize scrapers
     all_jobs = []
     
-    # LinkedIn Scraper
+    # LinkedIn Scraper - run in a dedicated thread to avoid Windows asyncio issue
     try:
-        async with LinkedInScraper(headless=True) as scraper:
-            linkedin_jobs = await scraper.scrape(criteria)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(run_playwright_sync, criteria)
+            linkedin_jobs = future.result(timeout=120)  # 2 minute timeout
             all_jobs.extend(linkedin_jobs)
             logger.info(f"LinkedIn Scraper returned {len(linkedin_jobs)} jobs")
     except Exception as e:
@@ -172,11 +196,8 @@ async def embed_and_store(state: AgentState) -> Dict:
                 )
                 if job_id:
                     stored_ids.append(job_id)
-                else:
-                    logger.warning(f"Failed to create job {i}: {job['title']}")
             except Exception as job_err:
                 logger.error(f"Error creating job {i}: {job_err}")
-                # Continue with other jobs instead of failing batch
                 continue
         
         logger.info(f"Successfully stored {len(stored_ids)} jobs")
@@ -203,6 +224,16 @@ async def notify_frontend(state: AgentState) -> Dict:
     new_jobs = state["context"].get("new_jobs", [])
     stored_ids = state["context"].get("stored_job_ids", [])
     
+    # Format job details for the artifact
+    job_details = [
+        {
+            "title": j.get("title"),
+            "company": j.get("company"),
+            "location": j.get("location"),
+            "url": j.get("url")
+        } for j in new_jobs
+    ]
+    
     # Create artifact with summary
     summary_artifact = Artifact(
         id=str(uuid.uuid4()),
@@ -210,7 +241,8 @@ async def notify_frontend(state: AgentState) -> Dict:
         name="job_search_summary",
         content={
             "jobs_found": len(new_jobs),
-            "jobs_stored": len(stored_ids),
+            "newly_stored": len(stored_ids),
+            "details": job_details,
             "criteria": state["context"].get("parsed_criteria"),
         }
     )
@@ -223,6 +255,7 @@ async def notify_frontend(state: AgentState) -> Dict:
         "output_data": {
             "jobs_found": len(new_jobs),
             "job_ids": stored_ids,
+            "job_list": job_details
         },
         "artifacts": [summary_artifact],
         "events": [MissionEvent(

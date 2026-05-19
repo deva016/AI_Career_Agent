@@ -128,6 +128,8 @@ CREATE TABLE user_settings (
   linkedin_url TEXT,
   work_authorization TEXT,
   willing_to_relocate BOOLEAN,
+  target_locations TEXT[], -- ['Remote', 'New York']
+  knowledge_base JSONB, -- Custom facts for auto-filling
   model_mode TEXT DEFAULT 'free', -- 'free', 'paid'
   updated_at TIMESTAMP DEFAULT NOW()
 );

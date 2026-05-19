@@ -1,0 +1,69 @@
+=== E2E Playwright Issue Report ===
+Started at: 2026-02-21T18:47:10.786912
+
+[CONSOLE_ERROR] - https://accounts.google.com/v3/signin/identifier?opparams=%253F&dsh=S-134076152%3A1771679837682219&access_type=offline&client_id=462893668721-a6ppgsd580jr47d2pmbu13g475tg86re.apps.googleusercontent.com&code_challenge=0qgLeWkjdmWe7HGI2Ds1Wyf66TEQW8YtoVEY8vaNsTI&code_challenge_method=S256&o2v=2&prompt=consent&redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fapi%2Fauth%2Fcallback%2Fgoogle&response_type=code&scope=openid+email+profile&service=lso&state=E8w8FtkZh1wJhfH5TByYyvCi0QAEzUbN0AeibBplIAc&flowName=GeneralOAuthFlow&continue=https%3A%2F%2Faccounts.google.com%2Fsignin%2Foauth%2Fconsent%3Fauthuser%3Dunknown%26part%3DAJi8hAPNsSPIvMzbM3pXdIJ9jBIFJy-CUR1ltvK7siIAgi4jkQXi2gX6V_z10U0iAK0LBbEdH8B-0TAXQ-IDBTIa_PwjonepfOTuCpMg9qh3nmC_UN_XquEVueyGwgj-Z31mdV4xWPork6RS0Du_48CZFAnwqhkDi-Wq0IUSOE6nAOa3kjAYm_48L_zfAMUyLKSucnJJmQw9teKAyOwn2tzvHnTsiwqV_DuxKW1jf9bEzjwCtavREsnrRv2xyO49zYkrmUeBBtAm9BdJigWShFpP94j0ODLv6RlPA0_o7N53Ezd2Qll6McWYXGLGrOIAAQAl7xmV1ZtIa0XBb0Ts0SI0XGNA03hzfuU3dW_8wYrbX03lepndJ0zAJUACCzXax4x1jR9FUbTJtrufbrjvFlw-f5qOK0WZqsTQ21rXqYjdj4jYnveuG4Bj86-qNmeCmHHPfQeL1BqDCYLVMG_h5iotH3zrcClN_g%26flowName%3DGeneralOAuthFlow%26as%3DS-134076152%253A1771679837682219%26client_id%3D462893668721-a6ppgsd580jr47d2pmbu13g475tg86re.apps.googleusercontent.com%26requestPath%3D%252Fsignin%252Foauth%252Fconsent%23&app_domain=http%3A%2F%2Flocalhost%3A3000&rart=ANgoxcf1wiO4vW8x86JQb0uf1u_CpyNGA2izMVgQNyKrkWquHs7FbZZH7V8l9PtS79uRkdJEGTO35HnUPe7N3iMjpWO-N8huObRgvVbvNDxw-2f2SLeJifk
+Blocked aria-hidden on an element because its descendant retained focus. The focus must not be hidden from assistive technology users. Avoid using aria-hidden on a focused element or its ancestor. Consider using the inert attribute instead, which will also prevent focus. For more details, see the aria-hidden section of the WAI-ARIA specification at https://w3c.github.io/aria/#aria-hidden.
+Element with focus: <div.sZwd7c B6Vhqe>
+Ancestor with aria-hidden: <div.Ih3FE>
+----------------------------------------
+[CONSOLE_ERROR] - https://accounts.google.co.in/accounts/SetSID
+Blocked aria-hidden on an element because its descendant retained focus. The focus must not be hidden from assistive technology users. Avoid using aria-hidden on a focused element or its ancestor. Consider using the inert attribute instead, which will also prevent focus. For more details, see the aria-hidden section of the WAI-ARIA specification at https://w3c.github.io/aria/#aria-hidden.
+Element with focus: <div.sZwd7c B6Vhqe>
+Ancestor with aria-hidden: <div.Ih3FE>
+----------------------------------------
+[CONSOLE_ERROR] - https://accounts.google.com/signin/oauth/id?authuser=0&part=AJi8hAMK-FuYgwLrVoUuMPHuAi-7TIxBh6KfVQwyNLxgYb7_bwM1PCYfd-Z4uLX4d5OHaYgzcaWOw8_GnkKbs5arjmpnLu5sB8I2_EyvPumM1ayW7WJxDOv2gmbg-DysDi1yZuuXQ-QZz5XwGmQrBoL5YYyOS_J0v7W-68N0XQVCoolHcsMuPPO1_pn3cNkqyUHJPLzg9tNrAZeF4uXL6RqQzxqmYNjNhrtyUSwTuTICnxDQj6PwXXni5nsZd1awlXAwy9yTi-MD9l0ifjBJud1P2TS5URJgpHVaqe2n2Nv7mFIwNU5xS6CXLegyeuWpYBCS2m8uNK9fZ118C4GsXUeVK9fz2Y5YG61aRUANN1J4p8aGph8TGpG6E3QvwvLH5gABq3DmL1nUVNZsBYZKA5rdp0hFlG_an4yDn2uAONwGhl_-hFj3w-mikFvhRfLB_zjat8P6G9idH6AzG9s0SlplyW2s0W_x_ud_3h8kuhlY4wBuzKkkQDqvJ2ssPi9AEEDRd0W1CCB-X9cURdlVkNjAfdaBLMDR9slKuEKMVV5l8gZSnfomJWtz3Vbn5nwyrMswBW_rmWbu9nXiUGuWca_Pf507itfXRVBTOWPagNSfIlF1ZV6BzSDMfjupe9S3qEdvyznuQTXAAbgkg3wShjw4oMsCrDNFMy93Ql3nwGZkni8vut5WV28B51zvHtDJN8e5eTxK4hMiwwOzonz1m-O46Y9oPbVGjyX6b6wSSqE_RNbjrM0AsL5yNnEHYIga7xw2gZ-8aZqkg91DWyMM_JVfOlV2UIDHpZwQ22hfNvhQSrPEQbB3Go0B4OImiCiCwfntidLD5Y-AAL1XO9DM0rxSYP1H1YsDqOAeqDFFv7M2y6iT4UNkI9v12_KmyJnTwFt1ZLfXqyGKnaXOfeVe4LIi9upkZwX7b1knRlUPA4TDnZUjw7VQPpY8eHWKdmBE3LkZ_WkEdUDNVUTeECvPBNmYDlOVkiYQjOXPCidAnxEToxoDvzEFg1E&flowName=GeneralOAuthFlow&as=S-134076152%3A1771679837682219&client_id=462893668721-a6ppgsd580jr47d2pmbu13g475tg86re.apps.googleusercontent.com&rapt=AEjHL4MM9DTzsPrA45oHsNVb1LW1-amTRpnhe3vXuwXkV9xLQVHq3L2njrv8j0IogEA4VBL3JWAb2fZn9VEvQ9Phb8UB8NXm0Okwt6KHmKEFlkeDlCjhSRQ&requestPath=%2Fsignin%2Foauth%2Fconsent#
+Blocked aria-hidden on an element because its descendant retained focus. The focus must not be hidden from assistive technology users. Avoid using aria-hidden on a focused element or its ancestor. Consider using the inert attribute instead, which will also prevent focus. For more details, see the aria-hidden section of the WAI-ARIA specification at https://w3c.github.io/aria/#aria-hidden.
+Element with focus: <div.sZwd7c B6Vhqe>
+Ancestor with aria-hidden: <div.Ih3FE>
+----------------------------------------
+[CONSOLE_ERROR] - http://localhost:3000/dashboard
+Failed to load resource: the server responded with a status of 404 (Not Found)
+----------------------------------------
+[NETWORK_ERROR] - http://localhost:3000/dashboard/artifacts
+Status 500: GET http://localhost:3000/api/artifacts
+----------------------------------------
+[CONSOLE_ERROR] - http://localhost:3000/dashboard/artifacts
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+----------------------------------------
+[NETWORK_ERROR] - http://localhost:3000/dashboard/artifacts
+Status 500: GET http://localhost:3000/api/artifacts
+----------------------------------------
+[CONSOLE_ERROR] - http://localhost:3000/dashboard/artifacts
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+----------------------------------------
+[NETWORK_ERROR] - http://localhost:3000/dashboard/artifacts
+Status 500: POST http://localhost:3000/api/interview
+----------------------------------------
+[CONSOLE_ERROR] - http://localhost:3000/dashboard/artifacts
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+----------------------------------------
+[NETWORK_ERROR] - http://localhost:3000/dashboard/insights
+Status 500: GET http://localhost:3000/api/interview/generate-question
+----------------------------------------
+[CONSOLE_ERROR] - http://localhost:3000/dashboard/insights
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+----------------------------------------
+[CONSOLE_ERROR] - http://localhost:3000/dashboard/insights
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+----------------------------------------
+[CONSOLE_ERROR] - http://localhost:3000/dashboard/insights
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+----------------------------------------
+[CONSOLE_ERROR] - http://localhost:3000/dashboard/insights
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+----------------------------------------
+[CONSOLE_ERROR] - http://localhost:3000/dashboard/insights
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+----------------------------------------

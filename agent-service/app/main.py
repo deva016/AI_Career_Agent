@@ -22,7 +22,11 @@ from core.database import DatabaseService
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    from core.logging_config import setup_logging
+    setup_logging()
+    
     settings = get_settings()
+    
     print("🚀 AI Career Agent Service starting...")
     print(f"📊 Model mode: {settings.default_model_mode}")
     print(f"🤖 Model: {settings.current_model}")
@@ -59,6 +63,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi import Request
+import sys
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    response = await call_next(request)
+    
+    # Format to exactly match Uvicorn's default access log
+    client_host = request.client.host if request.client else "127.0.0.1"
+    client_port = request.client.port if request.client else "0"
+    
+    status_text = "OK" if response.status_code < 400 else "Internal Server Error" if response.status_code == 500 else "Not Found" if response.status_code == 404 else ""
+    log_line = f'INFO:     {client_host}:{client_port} - "{request.method} {request.url.path} HTTP/{request.scope.get("http_version", "1.1")}" {response.status_code} {status_text}'
+    
+    import sys
+    import logging
+    logger = logging.getLogger("uvicorn.access")
+    
+    # Print to stdout explicitly and also log via uvicorn.access logger
+    print(log_line, file=sys.stdout, flush=True)
+    logger.info(log_line)
+    
+    return response
 
 # Health check endpoints
 @app.get("/")
@@ -71,7 +98,6 @@ async def root():
         "model_mode": settings.default_model_mode,
         "model": settings.current_model,
     }
-
 
 @app.get("/health")
 async def health_check():
@@ -95,7 +121,10 @@ async def health_check():
 
 
 # Import and include routers
-from app.routers import agent, jobs, resumes, applications, linkedin, dashboard
+from app.routers import (
+    agent, jobs, resumes, applications, linkedin, 
+    dashboard, interview, settings, insights, artifacts
+)
 
 app.include_router(agent.router, prefix="/api/agent", tags=["Agent Missions"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["Jobs"])
@@ -103,6 +132,10 @@ app.include_router(resumes.router, prefix="/api/resumes", tags=["Resumes"])
 app.include_router(applications.router, prefix="/api/applications", tags=["Applications"])
 app.include_router(linkedin.router, prefix="/api/linkedin", tags=["LinkedIn"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+app.include_router(interview.router, prefix="/api/interview", tags=["Interview"])
+app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
+app.include_router(insights.router, prefix="/api/insights", tags=["Insights"])
+app.include_router(artifacts.router, prefix="/api/artifacts", tags=["Artifacts"])
 
 
 if __name__ == "__main__":
@@ -112,4 +145,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=settings.port,
         reload=True,
+        reload_excludes=["*.log"]
     )

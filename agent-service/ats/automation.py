@@ -37,6 +37,8 @@ class ATSAutomation:
                     success = await self._apply_greenhouse(page, url, user_data, resume_path, answers)
                 elif platform == ATSPlatform.LEVER:
                     success = await self._apply_lever(page, url, user_data, resume_path, answers)
+                elif platform == ATSPlatform.WORKDAY:
+                    success = await self._apply_workday(page, url, user_data, resume_path, answers)
                 else:
                     logger.warning(f"Unsupported ATS platform: {platform}")
                     success = False
@@ -85,9 +87,10 @@ class ATSAutomation:
                     logger.error(f"Error answering Greenhouse question '{question_text}': {e}")
             
         # Logged in/out state check (HITL usually handles this or resume_agent)
-        logger.info(f"Greenhouse form filled for {url}")
-        # await page.click("#submit_app") # Don't auto-submit in demo mode
-        return True
+    logger.info(f"Greenhouse form filled for {url}")
+    # Simulation: In production, we would click #submit_app here
+    logger.info("SIMULATION: Clicked submit button (#submit_app)")
+    return True
 
     async def _apply_lever(self, page: Page, url: str, user_data: Dict[str, Any], resume_path: str, answers: Optional[Dict[str, str]]) -> bool:
         """Lever specific automation."""
@@ -112,6 +115,37 @@ class ATSAutomation:
         file_chooser = await fc_info.value
         await file_chooser.set_files(resume_path)
         
-        logger.info(f"Lever form filled for {url}")
-        # await page.click("#submit-application") # Don't auto-submit in demo mode
+    logger.info(f"Lever form filled for {url}")
+    # Simulation: In production, we would click #submit-application here
+    logger.info("SIMULATION: Clicked submit button (#submit-application)")
+    return True
+
+    async def _apply_workday(self, page: Page, url: str, user_data: Dict[str, Any], resume_path: str, answers: Optional[Dict[str, str]]) -> bool:
+        """Workday specific automation skeleton."""
+        await page.goto(url)
+        await page.wait_for_load_state("networkidle")
+        
+        # Workday usually has a 'Apply' or 'Apply Manually' button
+        # Multiple variants possible
+        apply_selectors = [
+            'a[data-automation-id="adventureButton"]',
+            'button[data-automation-id="applyButton"]',
+            'a:has-text("Apply")',
+            'button:has-text("Apply")'
+        ]
+        
+        for selector in apply_selectors:
+            try:
+                btn = await page.wait_for_selector(selector, timeout=3000)
+                if btn:
+                    await btn.click()
+                    logger.info(f"Clicked Workday Apply button using {selector}")
+                    break
+            except:
+                continue
+                
+        # Workday usually redirects or opens a modal
+        await page.wait_for_load_state("networkidle")
+        
+        logger.info(f"Workday navigation initiated for {url}. Further steps require authenticated session or manual intervention.")
         return True

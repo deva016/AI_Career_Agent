@@ -13,7 +13,8 @@ import json
 
 from graphs.state import (
     AgentState, MissionStatus, AgentType,
-    create_initial_state, update_status, MissionEvent, Artifact
+    create_initial_state, update_status, MissionEvent, Artifact,
+    get_retry_callback
 )
 from core.llm import LLMClient
 from core.database import db
@@ -88,9 +89,12 @@ async def extract_required_skills(state: AgentState) -> Dict:
     # Combine descriptions (truncated to avoid token limits)
     combined_desc = "\n\n".join([j["description"][:1000] for j in jobs])
     
-    skills_json = await llm.simple_prompt(
-        EXTRACT_SKILLS_PROMPT.format(job_description=combined_desc),
-        system="You are a technical recruiter. Respond only in valid JSON."
+    skills_json = await llm.chat(
+        messages=[
+            {"role": "system", "content": "You are a technical recruiter. Respond only in valid JSON."},
+            {"role": "user", "content": EXTRACT_SKILLS_PROMPT.format(job_description=combined_desc)}
+        ],
+        on_retry=get_retry_callback(state["mission_id"])
     )
     
     # Parse as simple list or handle dict wrapper
@@ -139,12 +143,15 @@ async def analyze_gaps(state: AgentState) -> Dict:
     candidate_profile = "\n".join([c["content"] for c in chunks])
     
     llm = LLMClient()
-    analysis_json = await llm.simple_prompt(
-        GAP_ANALYSIS_PROMPT.format(
-            required_skills=required_skills,
-            candidate_profile=candidate_profile
-        ),
-        system="You are a career coach. Respond only in valid JSON."
+    analysis_json = await llm.chat(
+        messages=[
+            {"role": "system", "content": "You are a career coach. Respond only in valid JSON."},
+            {"role": "user", "content": GAP_ANALYSIS_PROMPT.format(
+                required_skills=required_skills,
+                candidate_profile=candidate_profile
+            )}
+        ],
+        on_retry=get_retry_callback(state["mission_id"])
     )
     
     # Validate with Pydantic

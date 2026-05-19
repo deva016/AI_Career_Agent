@@ -1,6 +1,5 @@
-"use client";
-
 import { useState, useEffect, useCallback } from "react";
+import { agentClient } from "@/lib/api/agent-client";
 
 export interface Application {
   id: string;
@@ -20,23 +19,29 @@ export function useApplications(filters: { status?: string; limit?: number; offs
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
 
   const fetchApplications = useCallback(async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams();
-      if (filters.status && filters.status !== "all") queryParams.append("status", filters.status);
-      if (filters.limit) queryParams.append("limit", filters.limit.toString());
-      if (filters.offset) queryParams.append("offset", filters.offset.toString());
+      const response = await fetch(`/api/applications?${new URLSearchParams({
+        ...(filters.status && filters.status !== "all" && { status: filters.status }),
+        ...(filters.limit && { limit: filters.limit.toString() }),
+        ...(filters.offset && { offset: filters.offset.toString() }),
+      }).toString()}`);
 
-      const response = await fetch(`/api/applications?${queryParams.toString()}`);
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to fetch applications");
+        throw new Error("Failed to fetch applications");
       }
       
       const data = await response.json();
-      setApplications(Array.isArray(data) ? data : data.applications || []);
+      if (Array.isArray(data)) {
+         setApplications(data);
+         setTotal(data.length);
+      } else {
+         setApplications(data.applications || []);
+         setTotal(data.total || 0);
+      }
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -49,5 +54,27 @@ export function useApplications(filters: { status?: string; limit?: number; offs
     fetchApplications();
   }, [fetchApplications]);
 
-  return { applications, loading, error, refetch: fetchApplications };
+  return { applications, total, loading, error, refetch: fetchApplications };
+}
+
+export function useUpdateApplicationStatus() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const updateStatus = useCallback(async (applicationId: string, status: string, notes?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await agentClient.updateApplicationStatus(applicationId, status, notes);
+      return { success: true };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update application status";
+      setError(msg);
+      return { success: false, error: msg };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { updateStatus, loading, error };
 }

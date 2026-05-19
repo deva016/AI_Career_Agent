@@ -6,6 +6,7 @@ from core.llm import LLMClient
 from core.database import db
 from rag.embeddings import embeddings
 from rag.retriever import ChunkType
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,14 @@ class ResumeProcessor:
                 logger.error("No text extracted from resume PDF")
                 return False
                 
-            # 2. Chunk text (simple approach: split by double newlines or sections)
+            # 2. Update resume with original content
+            async with db.connection() as conn:
+                await conn.execute(
+                    "UPDATE resumes SET original_content = $1 WHERE id = $2",
+                    text, uuid.UUID(resume_id) if isinstance(resume_id, str) else resume_id
+                )
+            
+            # 3. Chunk text (simple approach: split by double newlines or sections)
             raw_chunks = self.chunk_text(text)
             logger.info(f"Generated {len(raw_chunks)} raw chunks from resume")
             
@@ -52,16 +60,15 @@ class ResumeProcessor:
                     continue
                     
                 # Classify chunk type
-                chunk_type_str = await self.llm.simple_prompt(
-                    CLASSIFY_CHUNK_PROMPT.format(snippet=chunk_content[:500]),
-                    system="You are a specialized classifier. Respond with exactly one word."
-                )
-                chunk_type_str = chunk_type_str.strip().lower()
-                
-                # Default to OTHER if classification fails or is invalid
                 try:
+                    chunk_type_str = await self.llm.simple_prompt(
+                        CLASSIFY_CHUNK_PROMPT.format(snippet=chunk_content[:500]),
+                        system="You are a specialized classifier. Respond with exactly one word."
+                    )
+                    chunk_type_str = chunk_type_str.strip().lower()
                     chunk_type = ChunkType(chunk_type_str)
-                except ValueError:
+                except Exception as e:
+                    logger.warning(f"Classification failed for chunk {i}, defaulting to OTHER: {e}")
                     chunk_type = ChunkType.OTHER
                     
                 # Generate embedding

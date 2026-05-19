@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 
 export interface Resume {
   id: string;
-  filename: string;
+  title?: string;
+  filename?: string;
+  pdf_url?: string;
   original_content?: string;
   tailored_content?: string;
   job_id?: string;
@@ -47,7 +49,7 @@ export function useResumes(jobId?: string) {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch("/api/resumes", {
+    const response = await fetch("/api/resumes/upload", {
       method: "POST",
       body: formData,
     });
@@ -62,5 +64,19 @@ export function useResumes(jobId?: string) {
     return result;
   };
 
-  return { resumes, loading, error, refetch: fetchResumes, uploadResume };
+  const deleteResume = async (resumeId: string) => {
+    const response = await fetch(`/api/resumes/${resumeId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+       const data = await response.json().catch(() => ({}));
+       throw new Error(data.error || "Delete failed");
+    }
+
+    fetchResumes();
+    return true;
+  };
+
+  return { resumes, loading, error, refetch: fetchResumes, uploadResume, deleteResume };
 }

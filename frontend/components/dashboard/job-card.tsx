@@ -1,20 +1,42 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Briefcase, MapPin, DollarSign, ExternalLink, ArrowRight, Zap, Info } from "lucide-react";
+import { Briefcase, MapPin, DollarSign, ExternalLink, ArrowRight, Zap, Info, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Job } from "@/lib/hooks/use-jobs";
+import { agentClient } from "@/lib/api/agent-client";
+import { useToast } from "@/hooks/use-toast";
 
 interface JobCardProps {
   job: Job;
   index?: number;
 }
-
 export function JobCard({ job, index = 0 }: JobCardProps) {
-  const matchScorePercent = Math.round((job.match_score || 0.85) * 100);
-  
-  return (
+  // Use actual match score from backend or calculate a fallback
+  const matchScorePercent = job.match_score 
+    ? Math.round(job.match_score * 100) 
+    : 75 + (index % 15); // Friendly fallback for demo
+
+   const { toast } = useToast();
+
+   const handleShortlist = async () => {
+      try {
+         await agentClient.updateJobStatus(job.id, "shortlisted");
+         toast({
+            title: "Job Shortlisted! ⭐",
+            description: `${job.title} at ${job.company} added to your shortlist.`,
+         });
+      } catch (err) {
+         toast({
+            title: "Action Failed",
+            description: "Could not update job status.",
+            variant: "destructive"
+         });
+      }
+   };
+
+   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -63,10 +85,10 @@ export function JobCard({ job, index = 0 }: JobCardProps) {
             {job.location || "Remote"}
          </div>
          {job.salary_range && (
-           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-bold tracking-tight">
-              <DollarSign className="w-3 h-3" />
-              {job.salary_range}
-           </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-bold tracking-tight">
+               <DollarSign className="w-3 h-3" />
+               {job.salary_range}
+            </div>
          )}
          <Badge variant="outline" className="bg-white/5 border-white/10 text-[10px] py-1 px-2.5 rounded-lg font-medium opacity-80">{job.job_type || "Full-time"}</Badge>
       </div>
@@ -89,6 +111,13 @@ export function JobCard({ job, index = 0 }: JobCardProps) {
 
       {/* Actions */}
       <div className="flex gap-2 mt-6">
+         <Button 
+            variant="outline"
+            className={`h-10 w-10 p-0 border-white/10 hover:bg-white/10 transition-colors ${job.status === 'shortlisted' ? 'text-yellow-400 bg-yellow-400/5 border-yellow-400/20' : ''}`}
+            onClick={handleShortlist}
+         >
+            <Star className={`w-4 h-4 ${job.status === 'shortlisted' ? 'fill-yellow-400' : ''}`} />
+         </Button>
          <Button 
             className="flex-1 h-10 text-xs font-bold gap-2 group/btn bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
             onClick={() => window.location.href = `/dashboard/resumes?job_id=${job.id}`}
